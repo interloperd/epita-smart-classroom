@@ -97,7 +97,31 @@ const start = () => {
   }
 
   btn.addEventListener('click', run);
-  document.addEventListener('esc:analyzed', () => { btn.disabled = !E.getFrameBitmap(); });
+
+  // ---- Mode automatique : préchargement en arrière-plan + analyse avancée incluse dans chaque audit
+  const auto = $('#advAuto');
+  try { auto.checked = localStorage.getItem('esc.advAuto') !== '0'; } catch { /* */ }
+  auto.addEventListener('change', () => { try { localStorage.setItem('esc.advAuto', auto.checked ? '1' : '0'); } catch { /* */ } if (auto.checked) preload(); });
+  const conn = navigator.connection || {};
+  const okNetwork = () => !conn.saveData && !['slow-2g', '2g', '3g'].includes(conn.effectiveType) && conn.type !== 'cellular';
+  let preloadDone = false;
+  function preload() {
+    if (preloadDone || !auto.checked) return;
+    if (!okNetwork()) { msg.textContent = 'Réseau mobile détecté : le modèle avancé sera récupéré au premier audit (≈ 155 Mo, idéalement en wifi).'; return; }
+    preloadDone = true;
+    const go = () => getDetector().then(() => { if (!E.state.analyzed) msg.textContent = '✓ Modèle avancé prêt (en cache) : il sera inclus automatiquement dans chaque audit.'; })
+      .catch((e) => { preloadDone = false; loading = null; msg.textContent = `Préchargement du modèle avancé impossible (${e.message || e}). Il sera retenté au prochain audit.`; });
+    ('requestIdleCallback' in window) ? requestIdleCallback(go, { timeout: 4000 }) : setTimeout(go, 2500);
+  }
+  document.addEventListener('esc:analyzed', () => {
+    btn.disabled = !E.getFrameBitmap();
+    // analyse avancée automatique sur chaque nouvelle capture (pas sur l'inventaire cumulé, ni en boucle)
+    if (auto.checked && E.state.analyzed && !E.state.advancedDone && !E.state.collectionMode && E.getFrameBitmap() && !btn.dataset.running) {
+      btn.dataset.running = '1';
+      run().finally(() => { delete btn.dataset.running; });
+    }
+  });
+  preload();
 };
 
 if (window.__ESC__) start(); else document.addEventListener('esc:ready', start, { once: true });

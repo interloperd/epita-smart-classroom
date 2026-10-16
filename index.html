@@ -203,8 +203,9 @@
             <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
           </div>
           <div class="adv-row">
-            <button id="btnAdvanced" class="btn btn-ghost" type="button" disabled>🔬 Analyse avancée : tables, tableau, fenêtres, portes (OWL-ViT)</button>
-            <span class="muted small" id="advMsg">Modèle « open-vocabulary » complémentaire (Google OWL-ViT via Transformers.js), à lancer sur une image capturée. Premier lancement : téléchargement du modèle, puis mis en cache.</span>
+            <label class="check"><input type="checkbox" id="advAuto" checked> <b>Inclure automatiquement l'analyse avancée</b> dans chaque audit</label>
+            <button id="btnAdvanced" class="btn btn-ghost btn-sm" type="button" disabled>🔬 Relancer l'analyse avancée</button>
+            <span class="muted small" id="advMsg">Second modèle « open-vocabulary » (Google OWL-ViT) : tables de cours, tableau, fenêtres, portes. Il est récupéré automatiquement par le navigateur une seule fois, puis mis en cache.</span>
           </div>
 
           <details class="card shoot-guide" id="shootGuide" open>
