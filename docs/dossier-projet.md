@@ -45,7 +45,7 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | **Équipe IT / support** | Contrôler écrans et ordinateurs portables | Détection, rapport |
 
 ### 1.4 Périmètre du MVP
-- **Inclus :** tutoriel de prise en main (onboarding) · accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
+- **Inclus :** tutoriel de prise en main (onboarding) · diagnostic de qualité de prise de vue et détection d'anomalies · site vitrine avec salle de classe 3D de test · accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
 - **Exclus (assumé) :**
   - toute analyse, identification ou comptage des personnes ;
   - l'enregistrement d'images ou de vidéos ;
@@ -88,7 +88,9 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | Interface | HTML / CSS / JS natif | 5 vues, responsive, accessible au clavier |
 | Vision | TensorFlow.js 4.22.0 + COCO-SSD 2.2.3 | Détection de 80 classes, `lite_mobilenet_v2` (rapide) ou `mobilenet_v2` (précis) |
 | Règles | `app.js` (fonction `computeAudit`) | Calcul des écarts, des statuts et des KPI |
-| Rapport | Gabarit à règles | 7 sections, impression PDF, export Markdown |
+| Qualité | `measureImage` / `assessQuality` | Luminosité, contraste, netteté (variance du laplacien), contre-jour, objets coupés, faibles ou superposés |
+| Vitrine 3D | Three.js 0.160.0 | Salle de synthèse configurable, détection sur la vue, vérité terrain |
+| Rapport | Gabarit à règles | 8 sections, impression PDF, export Markdown |
 | Versionnement | GitHub | Code, commits, README, issues |
 | Hébergement | Cloudflare Pages | URL publique HTTPS (nécessaire pour la caméra) |
 
@@ -125,8 +127,10 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | US13 | Je veux **choisir la variante du modèle** (rapide ou précise). | Could | ✅ Fait |
 | US14 | Je veux un **historique des audits** de la session, afin de mesurer le temps moyen. | Should | ✅ Fait |
 | US15 | En tant que nouvel utilisateur, je veux un **tutoriel de prise en main** (onboarding en 6 étapes) au premier lancement, afin d'utiliser l'outil correctement et de respecter les règles de cadrage. | Should | ✅ Fait |
-| US16 | Je veux **agréger plusieurs prises de vue** pour une grande salle. | Could | ⏳ Backlog (risque de doublons) |
-| US17 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
+| US16 | Je veux être **alerté si la prise de vue est mauvaise** (trop sombre, contre-jour, flou, objet coupé, mal reconnu, superposé), avec un conseil concret (« allumez la lumière », « redressez l'objet »), afin de refaire une capture fiable. | Must | ✅ Fait |
+| US17 | Je veux une **salle de classe 3D de démonstration** dont le contenu exact est connu, afin de tester la détection et mesurer le taux de détection sans image interne. | Should | ✅ Fait |
+| US18 | Je veux **agréger plusieurs prises de vue** pour une grande salle. | Could | ⏳ Backlog (risque de doublons) |
+| US19 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
 
 **Planning sur 4 heures :**
 
@@ -172,8 +176,13 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T8 | Démarrer, capturer, arrêter la caméra (caméra virtuelle) | Le flux s'arrête, les boutons sont cohérents, l'audit est ajouté à l'historique | ✅ Conforme |
 | T9 | Affichage mobile (390 px) | Pas de défilement horizontal | ✅ Largeur 390 px |
 | T10 | Fichier non image | Message « Format non pris en charge » | ✅ Géré |
+| T11 | Image très sombre (luminosité moyenne < 22 %) | Qualité « Insuffisante » + conseil « Allumez la lumière » | ✅ Conforme |
+| T12 | Objet coupé par le bord, détection faible, doublon | Anomalies « coupé », « mal reconnu → redressez », « chevauchement » | ✅ Conforme |
+| T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |
 
-### 5.2 Trois situations réelles (webcam ou photo)
+### 5.2 Trois situations réelles (webcam ou photo) et salle 3D
+
+La salle 3D (`vitrine.html`) fournit un **jeu de test synthétique annoté** : la vérité terrain est connue, ce qui permet de mesurer K1 sans image interne à l'EPITA. Elle permet de rejouer les mêmes situations (vue d'ensemble, contre-jour, rapproché, chaises en désordre).
 
 | Situation | Conditions | Objets détectés | Écarts | Durée | Observations |
 |---|---|---|---|---|---|
@@ -199,7 +208,8 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | R6 | Caméra refusée ou absente | Moyenne | Moyen | Messages par type d'erreur, alternative par import d'image |
 | R7 | Seuil mal réglé (faux positifs ou oublis) | Moyenne | Moyen | Seuil visible et réglable, détections sous le seuil listées à part |
 | R8 | Délai de 4 heures | Élevée | Élevé | Approche minimale (sans build ni backend), périmètre MVP strict, déploiement continu |
-| R9 | Images non autorisées | Faible | Élevé | Charte affichée, aucune image publiée dans le dépôt |
+| R9 | Images non autorisées | Faible | Élevé | Charte affichée, aucune image publiée dans le dépôt, salle 3D de synthèse pour les tests |
+| R10 | Prise de vue de mauvaise qualité (obscurité, contre-jour, flou) | Élevée | Moyen | Diagnostic automatique en direct et après capture, avec conseil d'action |
 
 ### 6.2 Limites du modèle
 1. **Modèle généraliste :** COCO a été entraîné sur des scènes du quotidien, pas sur des salles de cours.

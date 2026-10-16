@@ -17,7 +17,12 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 2. **Détection** — un modèle pré-entraîné (COCO-SSD) repère les équipements, affiche un cadre, la catégorie et le score de confiance. Seuil de confiance paramétrable en direct.
 3. **Audit** — comparaison à une configuration théorique modifiable (attendu / détecté / écart / statut).
 4. **Tableau de bord** — objets détectés, catégories reconnues, règles vérifiables, écarts, statut global, taux de détection, durée d'audit, temps d'inférence. Tous calculés sur les résultats réels.
-5. **Rapport d'audit** — généré par règles (sans IA générative), imprimable en PDF ou téléchargeable en Markdown.
+5. **Qualité de prise de vue et anomalies** — diagnostic en direct et après capture (image trop sombre → « allumez la lumière », contre-jour, flou, objets coupés par le cadre, mal reconnus → « redressez l'objet », chevauchements suspects), repris dans le rapport.
+6. **Rapport d'audit** — généré par règles (sans IA générative), imprimable en PDF ou téléchargeable en Markdown.
+
+### Site vitrine et salle 3D
+
+`vitrine.html` présente la solution et embarque une **salle de classe 3D générée par code (Three.js 0.160.0)**, sans aucune image réelle ni personne. Elle est configurable (tables, chaises, portables, tableau, fenêtres, écran, désordre), propose 4 points de vue et 3 éclairages (jour, soir, contre-jour), et lance la **vraie détection COCO-SSD** sur la vue. La vérité terrain étant connue, elle donne directement le **taux de détection** (KPI 1). La vue est exportable en PNG pour servir d'image de test autorisée dans l'application.
 
 ## 2. Technologies
 
@@ -26,6 +31,7 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 | Frontend | HTML, CSS, JavaScript natif (aucun build) | — |
 | Vision | TensorFlow.js **4.22.0** | `https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js` |
 | Modèle | COCO-SSD **2.2.3** (`lite_mobilenet_v2` par défaut, `mobilenet_v2` en option) | `https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js` — dépôt : [tensorflow/tfjs-models/coco-ssd](https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd). Les poids sont téléchargés par la bibliothèque depuis le stockage public de Google (`storage.googleapis.com/tfjs-models`). |
+| 3D (vitrine) | Three.js **0.160.0** + OrbitControls | `https://cdn.jsdelivr.net/npm/three@0.160.0/` (importmap) |
 | Typographie | Montserrat (Google Fonts) | `fonts.googleapis.com` |
 | Code & versions | GitHub | ce dépôt |
 | Hébergement | Cloudflare Pages (site statique, sans Workers) | intégration Git, branche `main` |
@@ -103,7 +109,8 @@ Les catégories non prises en charge sont affichées comme **« Non vérifiable 
 epita-smart-classroom/
 ├── index.html          # structure (accueil, audit, configuration, tableau de bord, rapport)
 ├── style.css           # design system (violet #5B2D8E, Montserrat)
-├── app.js              # caméra, détection, audit, KPI, rapport, gestion des erreurs
+├── app.js              # caméra, détection, qualité de prise de vue, audit, KPI, rapport, erreurs
+├── vitrine.html / vitrine.css / vitrine.js   # site vitrine + salle de classe 3D
 ├── assets/favicon.svg
 └── docs/dossier-projet.md   # cadrage, backlog, KPI, tests, risques
 ```
