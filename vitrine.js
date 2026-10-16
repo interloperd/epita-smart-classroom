@@ -261,19 +261,54 @@ function loop() {
 let model = null, modelPromise = null;
 const THRESHOLD = 0.5;
 const CAT = [
-  { key: 'tables', label: 'Tables', coco: ['dining table'] },
-  { key: 'chairs', label: 'Chaises', coco: ['chair'] },
-  { key: 'laptops', label: 'Ordinateurs portables', coco: ['laptop'] },
-  { key: 'screens', label: 'Écrans', coco: ['tv'] },
-  { key: 'board', label: 'Tableau', coco: [] },
-  { key: 'windows', label: 'Fenêtres', coco: [] },
-  { key: 'doors', label: 'Portes', coco: [] },
+  { key: 'tables', label: 'Tables', coco: ['dining table'], adv: ['desk'] },
+  { key: 'chairs', label: 'Chaises', coco: ['chair'], adv: [] },
+  { key: 'laptops', label: 'Ordinateurs portables', coco: ['laptop'], adv: [] },
+  { key: 'screens', label: 'Écrans', coco: ['tv'], adv: ['screen'] },
+  { key: 'board', label: 'Tableau', coco: [], adv: ['whiteboard'] },
+  { key: 'windows', label: 'Fenêtres', coco: [], adv: ['window'] },
+  { key: 'doors', label: 'Portes', coco: [], adv: ['door'] },
 ];
-const FR = { 'chair': 'Chaise', 'dining table': 'Table', 'laptop': 'Portable', 'tv': 'Écran', 'keyboard': 'Clavier', 'couch': 'Canapé', 'bench': 'Banc', 'book': 'Livre' };
+// ---------------------------------------------------------------- Analyse avancée OWL-ViT (mêmes réglages que l'application)
+const TJS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+const OWL_ID = 'Xenova/owlvit-base-patch32';
+const OWL_THR = 0.1;
+const QUERIES = [
+  { text: 'a classroom desk', cls: 'desk' }, { text: 'a table', cls: 'desk' },
+  { text: 'a whiteboard', cls: 'whiteboard' }, { text: 'a window', cls: 'window' },
+  { text: 'a door', cls: 'door' }, { text: 'a wall-mounted television screen', cls: 'screen' },
+];
+let owl = null, owlLoading = null, advDone = false;
+async function ensureOwl() {
+  if (owl) return owl;
+  if (!owlLoading) owlLoading = (async () => {
+    const { pipeline, env } = await import(TJS_URL); env.allowLocalModels = false;
+    const files = {};
+    return pipeline('zero-shot-object-detection', OWL_ID, { device: 'wasm', dtype: 'q8', progress_callback: (p) => {
+      if (p.status === 'progress' && p.total) { files[p.file] = [p.loaded, p.total]; const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]); setStatus(`Téléchargement du modèle avancé OWL-ViT (une seule fois) : ${Math.round((l / t) * 100)} % · ${Math.round(t / 1e6)} Mo`); }
+    } });
+  })();
+  try { owl = await owlLoading; } catch (e) { owlLoading = null; throw e; }
+  return owl;
+}
+const iou = (a, b) => { const ix = Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])); const iy = Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1])); const i = ix * iy; return i / (a[2] * a[3] + b[2] * b[3] - i || 1); };
+async function runOwl(cocoPreds) {
+  const det = await ensureOwl();
+  const blob = await new Promise((r) => renderer.domElement.toBlob(r, 'image/jpeg', 0.92));
+  const url = URL.createObjectURL(blob);
+  let out; try { out = await det(url, QUERIES.map((q) => q.text), { threshold: OWL_THR, percentage: false }); } finally { URL.revokeObjectURL(url); }
+  let preds = out.map((o) => ({ class: (QUERIES.find((q) => q.text === o.label) || {}).cls || 'desk', score: o.score, bbox: [o.box.xmin, o.box.ymin, o.box.xmax - o.box.xmin, o.box.ymax - o.box.ymin], owl: true }));
+  const kept = []; preds.sort((a, b) => b.score - a.score).forEach((p) => { if (!kept.some((q) => q.class === p.class && iou(q.bbox, p.bbox) > 0.45)) kept.push(p); });
+  // pas de double comptage avec COCO-SSD (tables ↔ desk, tv ↔ screen)
+  const twin = { desk: 'dining table', screen: 'tv' };
+  return kept.filter((p) => !twin[p.class] || !cocoPreds.some((c) => c.class === twin[p.class] && iou(c.bbox, p.bbox) > 0.3));
+}
+const FR = { 'desk': 'Table (OWL)', 'whiteboard': 'Tableau (OWL)', 'window': 'Fenêtre (OWL)', 'door': 'Porte (OWL)', 'screen': 'Écran (OWL)', 'chair': 'Chaise', 'dining table': 'Table', 'laptop': 'Portable', 'tv': 'Écran', 'keyboard': 'Clavier', 'couch': 'Canapé', 'bench': 'Banc', 'book': 'Livre' };
 let lastDetected = null;
 
 function setStatus(t) { $('#detStatus').textContent = t; }
 function clearDetection() {
+  advDone = false;
   overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
   lastDetected = null; renderTruth();
 }
@@ -281,17 +316,18 @@ function clearDetection() {
 function renderTruth() {
   $('#gtTable tbody').innerHTML = CAT.map((c) => {
     const real = truth[c.key];
-    const det = !c.coco.length ? '<span class="na">hors modèle</span>' : lastDetected ? lastDetected[c.key] : '—';
+    const supported = c.coco.length || (advDone && c.adv.length);
+    const det = !supported ? '<span class="na">analyse avancée</span>' : lastDetected ? lastDetected[c.key] : '—';
     return `<tr><td>${c.label}</td><td class="n">${real}</td><td class="n">${det}</td></tr>`;
   }).join('');
   const box = $('#rateBox');
   if (!lastDetected) { box.hidden = true; return; }
-  const sup = CAT.filter((c) => c.coco.length && truth[c.key] > 0);
+  const sup = CAT.filter((c) => (c.coco.length || (advDone && c.adv.length)) && truth[c.key] > 0);
   const sumReal = sup.reduce((s, c) => s + truth[c.key], 0);
   const sumHit = sup.reduce((s, c) => s + Math.min(lastDetected[c.key], truth[c.key]), 0);
   box.hidden = false;
   $('#rateVal').textContent = sumReal ? `${Math.round((sumHit / sumReal) * 100)} %` : '—';
-  $('#rateNote').textContent = `${sumHit} objet(s) retrouvé(s) sur ${sumReal} vérifiables · seuil ${Math.round(THRESHOLD * 100)} %`;
+  $('#rateNote').textContent = `${sumHit} objet(s) retrouvé(s) sur ${sumReal} vérifiables · ${advDone ? 'COCO-SSD + OWL-ViT' : `COCO-SSD seul, seuil ${Math.round(THRESHOLD * 100)} %`}`;
 }
 
 async function ensureModel() {
@@ -311,12 +347,24 @@ async function detect() {
     setStatus('Analyse de la vue…');
     renderer.render(scene, camera);
     const t0 = performance.now();
-    const preds = (await model.detect(renderer.domElement, 100, THRESHOLD)).filter((p) => p.class !== 'person');
-    const ms = Math.round(performance.now() - t0);
+    let preds = (await model.detect(renderer.domElement, 100, THRESHOLD)).filter((p) => p.class !== 'person');
+    advDone = false;
     lastDetected = Object.fromEntries(CAT.map((c) => [c.key, preds.filter((p) => c.coco.includes(p.class)).length]));
-    drawBoxes(preds);
-    renderTruth();
-    const others = preds.filter((p) => !CAT.some((c) => c.coco.includes(p.class)));
+    drawBoxes(preds); renderTruth();
+    let advNote = '';
+    if ($('#advIn3d').checked) {
+      try {
+        setStatus('COCO-SSD terminé · analyse avancée OWL-ViT en cours…');
+        renderer.render(scene, camera);
+        const extra = await runOwl(preds);
+        preds = preds.concat(extra); advDone = true;
+        lastDetected = Object.fromEntries(CAT.map((c) => [c.key, preds.filter((p) => c.coco.includes(p.class) || c.adv.includes(p.class)).length]));
+        drawBoxes(preds); renderTruth();
+        advNote = ` + ${extra.length} par OWL-ViT`;
+      } catch (e) { console.warn('[OWL-ViT]', e); advNote = ` · analyse avancée indisponible (${e.message || e})`; }
+    }
+    const ms = Math.round(performance.now() - t0);
+    const others = preds.filter((p) => !CAT.some((c) => c.coco.includes(p.class) || c.adv.includes(p.class)));
     // Diagnostic de visibilité : luminosité moyenne de la vue
     const q = document.createElement('canvas'); q.width = 80; q.height = 50;
     const qc = q.getContext('2d'); qc.drawImage(renderer.domElement, 0, 0, 80, 50);
@@ -326,7 +374,7 @@ async function detect() {
     const tip = lum < 55 ? ' ⚠ Vue trop sombre : allumez la lumière (bouton « Jour »).'
       : lum > 215 ? ' ⚠ Vue surexposée.'
       : cfg.mess ? ' Chaises en désordre : certaines peuvent être mal reconnues, redressez-les (décochez « désordre »).' : '';
-    setStatus(`${preds.length} détection(s) en ${ms} ms${others.length ? ` (dont ${others.length} autre(s) : ${[...new Set(others.map((o) => FR[o.class] || o.class))].join(', ')})` : ''}.${tip}`);
+    setStatus(`${preds.length} détection(s) en ${ms} ms${advNote}${others.length ? ` (dont ${others.length} autre(s) : ${[...new Set(others.map((o) => FR[o.class] || o.class))].join(', ')})` : ''}.${tip}`);
   } catch (e) {
     console.error(e);
     setStatus(`Détection indisponible : ${e.message || e}. La salle 3D reste utilisable.`);
@@ -341,11 +389,11 @@ function drawBoxes(preds) {
   ctx.lineWidth = 2.5 * s; ctx.font = `600 ${12 * s}px Montserrat, sans-serif`;
   preds.forEach((p) => {
     const [x, y, w, h] = p.bbox;
-    ctx.strokeStyle = '#E3D2F7'; ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = p.owl ? '#FFE9A8' : '#E3D2F7'; ctx.strokeRect(x, y, w, h);
     const label = `${FR[p.class] || p.class} · ${Math.round(p.score * 100)} %`;
     const tw = ctx.measureText(label).width + 10 * s, th = 18 * s, ly = y > th ? y - th : y;
-    ctx.fillStyle = '#5B2D8E'; ctx.fillRect(x - 1, ly, tw, th);
-    ctx.fillStyle = '#fff'; ctx.fillText(label, x + 4 * s, ly + 13 * s);
+    ctx.fillStyle = p.owl ? '#FFE9A8' : '#5B2D8E'; ctx.fillRect(x - 1, ly, tw, th);
+    ctx.fillStyle = p.owl ? '#2A1342' : '#fff'; ctx.fillText(label, x + 4 * s, ly + 13 * s);
   });
 }
 

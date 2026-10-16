@@ -243,6 +243,11 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 
 /* ---------- Film de présentation ---------- */
 .film { margin: 8px 0 28px; }
+.film-video-wrap { border-radius: 20px; overflow: hidden; background: var(--violet-900); box-shadow: 0 30px 80px rgba(42,19,66,.25); }
+.film-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--violet-900); }
+.film-video-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.film-video-bar .muted { margin-right: auto; }
+.film-interactive { margin-top: 18px; }
 .film-stage { position: relative; border-radius: 20px; overflow: hidden; background: var(--violet-900); box-shadow: 0 30px 80px rgba(42,19,66,.25); }
 .film-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .film-stage:fullscreen { border-radius: 0; display: grid; place-items: center; background: #000; }

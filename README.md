@@ -11,7 +11,7 @@
 
 EPITA Smart Classroom aide un responsable non technique à vérifier la configuration d'une salle :
 
-0. **Film de présentation** (page d'accueil) — motion design temps réel : téléphone 3D (Three.js) dont l'écran anime chaque module, 10 chapitres (accroche → problème → modules → confiance → appel à l'action), chapitres cliquables, plein écran, **export vidéo WebM** depuis le navigateur.
+0. **Film de présentation** (page d'accueil) — vidéo MP4 1080p de 72 s (`assets/film.mp4`) avec **musique originale composée par synthèse procédurale** (libre de droits) : téléphone 3D (Three.js) dont l'écran anime chaque module, 10 chapitres (accroche → problème → modules → confiance → appel à l'action). Version interactive 3D chargée à la demande (chapitres, plein écran, export WebM).
 0. **Tutoriel de prise en main** — onboarding en 6 étapes au premier lancement (règles de cadrage, lecture des statuts), relançable via le bouton « ? Tuto ».
 
 1. **Prise de vue** — webcam (bouton démarrer / arrêter) ou import d'une image de test autorisée.
@@ -29,7 +29,7 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 
 ### Site vitrine et salle 3D
 
-`vitrine.html` présente la solution et embarque une **salle de classe 3D générée par code (Three.js 0.160.0)**, sans aucune image réelle ni personne. Elle est configurable (tables, chaises, portables, tableau, fenêtres, porte, écran, désordre), s'affiche en **plein écran**, propose 5 points de vue et 3 éclairages (jour, soir, contre-jour), et lance la **vraie détection COCO-SSD** sur la vue. La vérité terrain étant connue, elle donne directement le **taux de détection** (KPI 1). La vue est exportable en PNG pour servir d'image de test autorisée dans l'application.
+`vitrine.html` présente la solution et embarque une **salle de classe 3D générée par code (Three.js 0.160.0)**, sans aucune image réelle ni personne. Elle est configurable (tables, chaises, portables, tableau, fenêtres, porte, écran, désordre), s'affiche en **plein écran**, propose 5 points de vue et 3 éclairages (jour, soir, contre-jour), et lance la **vraie détection COCO-SSD puis l'analyse avancée OWL-ViT** sur la vue (tableau, fenêtres, porte, écran compris). La vérité terrain étant connue, elle donne directement le **taux de détection** (KPI 1). La vue est exportable en PNG pour servir d'image de test autorisée dans l'application.
 
 ## 2. Technologies
 
@@ -123,6 +123,13 @@ Les catégories non prises en charge sont affichées comme **« Non vérifiable 
 - **Audio anonyme** : seules des catégories de sons et un niveau sonore sont calculés ; aucun enregistrement audio, aucune transcription, aucune identification de locuteur.
 - Seuls la configuration et un historique chiffré (heure, nombre d'objets, écarts, durée) sont conservés dans le `localStorage` du navigateur de l'utilisateur.
 - Cadrer la caméra sur le mobilier ; n'utiliser que des images autorisées.
+
+## 6 bis. Performance
+
+- Modèle COCO-SSD `lite_mobilenet_v2` par défaut ; une seule inférence par cycle en mode Scan (~8 IPS).
+- Analyse avancée (155 Mo) préchargée en arrière-plan uniquement en wifi, puis mise en cache.
+- Animation du film arrêtée en pause et hors écran ; Three.js chargé seulement à la demande sur l'accueil.
+- Bibliothèques en versions figées (cache navigateur/CDN), aucune étape de build.
 
 ## 7. Limites connues
 

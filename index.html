@@ -23,7 +23,15 @@
   <script defer src="registry.js"></script>
   <script type="module" src="scan.js"></script>
   <script type="module" src="advanced.js"></script>
-  <script type="module" src="film.js"></script>
+  <script>
+    // Version interactive 3D chargée à la demande seulement (Three.js n'est pas téléchargé à l'ouverture)
+    document.addEventListener('DOMContentLoaded', function () { document.getElementById('filmInteractiveBtn').addEventListener('click', function () {
+      var root = document.getElementById('filmRoot'); var v = document.getElementById('filmVideo');
+      if (!root.hidden) { root.hidden = true; this.textContent = '◎ Version interactive 3D'; if (window.__FILM__) window.__FILM__.pause(); return; }
+      if (v) v.pause(); root.hidden = false; this.textContent = '✕ Fermer la version 3D';
+      if (!window.__filmLoaded) { window.__filmLoaded = true; import('./film.js'); }
+    }); });
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -85,19 +93,32 @@
         </div>
       </div>
 
-      <section class="film" id="filmRoot" aria-label="Film de présentation">
-        <div class="film-stage">
-          <canvas class="film-canvas" aria-label="Film de présentation animé d'EPITA Smart Classroom"></canvas>
-          <p class="film-fallback" hidden>Le film nécessite WebGL : ouvrez la page sur un navigateur récent.</p>
+      <section class="film" aria-label="Film de présentation">
+        <div class="film-video-wrap">
+          <video id="filmVideo" class="film-video" controls playsinline preload="metadata" poster="assets/film-poster.jpg">
+            <source src="assets/film.mp4" type="video/mp4">
+            Votre navigateur ne lit pas la vidéo : <a href="assets/film.mp4">téléchargez-la</a>.
+          </video>
         </div>
-        <div class="film-bar">
-          <button class="btn btn-primary btn-sm" type="button" data-film="play">▶ Lecture</button>
-          <div class="film-progress" role="progressbar" aria-label="Progression du film"><span></span></div>
-          <span class="film-time">0:00</span>
-          <button class="btn btn-ghost btn-sm" type="button" data-film="full">⛶ Plein écran</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-film="rec">⬇ Télécharger la vidéo</button>
+        <div class="film-video-bar">
+          <span class="muted small">Film de présentation · 1 min 12 · musique originale libre de droits</span>
+          <a class="btn btn-ghost btn-sm" href="assets/film.mp4" download="EPITA-Smart-Classroom-film.mp4">⬇ Télécharger (MP4)</a>
+          <button class="btn btn-ghost btn-sm" type="button" id="filmInteractiveBtn">◎ Version interactive 3D</button>
         </div>
-        <div class="film-chips" aria-label="Chapitres"></div>
+        <div id="filmRoot" class="film-interactive" hidden>
+          <div class="film-stage">
+            <canvas class="film-canvas" aria-label="Film de présentation animé d'EPITA Smart Classroom"></canvas>
+            <p class="film-fallback" hidden>Le film nécessite WebGL : ouvrez la page sur un navigateur récent.</p>
+          </div>
+          <div class="film-bar">
+            <button class="btn btn-primary btn-sm" type="button" data-film="play">▶ Lecture</button>
+            <div class="film-progress" role="progressbar" aria-label="Progression du film"><span></span></div>
+            <span class="film-time">0:00</span>
+            <button class="btn btn-ghost btn-sm" type="button" data-film="full">⛶ Plein écran</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-film="rec">⬇ Exporter (WebM)</button>
+          </div>
+          <div class="film-chips" aria-label="Chapitres"></div>
+        </div>
       </section>
 
       <div class="steps">

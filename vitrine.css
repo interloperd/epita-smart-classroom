@@ -83,6 +83,8 @@ main > section.band > * { max-width: 1160px; margin-left: auto; margin-right: au
 .field input { width: 100%; accent-color: var(--violet); }
 .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: .82rem; margin: 6px 0 10px; }
 .toggles input { accent-color: var(--violet); }
+.adv3d { display: flex; gap: 8px; align-items: flex-start; font-size: .8rem; margin: 10px 0 2px; color: var(--violet-900); font-weight: 500; }
+.adv3d input { accent-color: var(--violet); margin-top: 3px; }
 .hint { font-size: .74rem; color: var(--muted); margin: 8px 0 0; }
 .det-status { font-size: .8rem; color: var(--violet-900); margin: 14px 0 6px; min-height: 1.2em; }
 .gt { width: 100%; border-collapse: collapse; font-size: .82rem; }

@@ -205,6 +205,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T16 | Registre : changement de statut et commentaire | KPI recalculés (taux de résolution), persistance en base | ✅ Conforme |
 | T19 | Seuil par classe : table détectée à 40 %, seuil global 50 % | Table retenue (seuil tables 30 %), chaise à 40 % écartée | ✅ Conforme |
 | T20 | Analyse avancée OWL-ViT (pipeline simulé) : bureau recouvrant une table COCO, 2 requêtes sur le même bureau, tableau, fenêtre sous le seuil | Doublon écarté, requêtes fusionnées (NMS) → +1 table ; Tableau « Conforme » ; 1 fenêtre ; fenêtre à 5 % ignorée | ✅ Conforme (logique ; inférence réelle à valider en ligne) |
+| T21 | Salle 3D + OWL-ViT (pipeline simulé) : tableau, 2 fenêtres, porte, écran doublon de la « tv » COCO | Tableau 1/1, fenêtres 2/3, porte 1/1, écran compté une seule fois ; taux de détection recalculé sur 7 catégories | ✅ Conforme |
 | T17 | Tolérance d'écart | Écart dans la tolérance → « Conforme (tolérance) » | ✅ Conforme |
 | T18 | Inventaire cumulé : ajouter 4 objets, en décocher 1, valider, retirer 1 | 3 objets en inventaire puis 2 ; audit lié recalculé automatiquement (3 → 2) | ✅ Conforme |
 | T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |

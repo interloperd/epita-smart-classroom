@@ -258,7 +258,8 @@ export function mountFilm(root) {
   const tex = new THREE.CanvasTexture(scr); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const phone = buildPhone(tex); scene.add(phone);
 
-  const stars = Array.from({ length: 90 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2.2 + 0.4, s: Math.random() * 0.3 + 0.05 }));
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const stars = Array.from({ length: 90 }, () => ({ x: rnd() * W, y: rnd() * H, r: rnd() * 2.2 + 0.4, s: rnd() * 0.3 + 0.05 }));
   const st = { t: 0, playing: false, last: 0, onEnd: null, prevScene: -1 };
   const chips = root.querySelector('.film-chips');
   chips.innerHTML = SCENES.map((s, i) => `<button type="button" data-i="${i}">${i + 1}. ${s.chip}</button>`).join('');
@@ -290,16 +291,24 @@ export function mountFilm(root) {
     g.restore();
   }
 
+  // Boucle d'animation active seulement pendant la lecture (aucun calcul en pause ou hors écran)
+  let looping = false;
+  function startLoop() { if (!looping) { looping = true; st.last = performance.now(); requestAnimationFrame(frame); } }
   function frame(now) {
+    if (!st.playing) { looping = false; render(); return; }
     if (st.playing) {
       const dt = Math.min(0.05, (now - st.last) / 1000 || 0); st.t += dt;
       if (st.t >= TOTAL) { st.t = TOTAL - 0.001; st.playing = false; playBtn.textContent = '↻ Revoir'; if (st.onEnd) { const f = st.onEnd; st.onEnd = null; f(); } }
     }
     st.last = now;
+    render();
+    if (st.playing) requestAnimationFrame(frame); else looping = false;
+  }
+  function render() {
     const i = sceneAt(st.t), sc = SCENES[i], lt = st.t - STARTS[i], p = lt / sc.d;
     // fond
     const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#2A1342'); bg.addColorStop(1, '#140a22'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    stars.forEach((s) => { s.x -= s.s; if (s.x < 0) s.x = W; g.fillStyle = `rgba(214,198,231,${0.25 + s.r / 6})`; g.beginPath(); g.arc(s.x, s.y, s.r, 0, Math.PI * 2); g.fill(); });
+    stars.forEach((s) => { const x = ((s.x - st.t * s.s * 60) % W + W) % W; g.fillStyle = `rgba(214,198,231,${0.25 + s.r / 6})`; g.beginPath(); g.arc(x, s.y, s.r, 0, Math.PI * 2); g.fill(); });
     const glow = g.createRadialGradient(1380, 540, 40, 1380, 540, 560); glow.addColorStop(0, 'rgba(91,45,142,.75)'); glow.addColorStop(1, 'rgba(91,45,142,0)'); g.fillStyle = glow; g.fillRect(0, 0, W, H);
     // écran + téléphone
     drawScreen(sc.id, p, st.t); tex.needsUpdate = true;
@@ -322,13 +331,14 @@ export function mountFilm(root) {
     bar.style.width = `${(st.t / TOTAL) * 100}%`;
     timeEl.textContent = `${Math.floor(st.t / 60)}:${String(Math.floor(st.t % 60)).padStart(2, '0')} / ${Math.floor(TOTAL / 60)}:${String(Math.round(TOTAL % 60)).padStart(2, '0')}`;
     if (i !== st.prevScene) { chips.querySelectorAll('button').forEach((b, k) => b.classList.toggle('on', k === i)); st.prevScene = i; }
-    requestAnimationFrame(frame);
   }
+  /** Rendu déterministe d'une image du film à l'instant t (utilisé pour l'export MP4 image par image). */
+  function renderAt(t) { st.playing = false; st.t = Math.min(TOTAL - 0.001, Math.max(0, t)); render(); }
 
-  function play() { if (st.t >= TOTAL - 0.01) st.t = 0; st.playing = true; st.last = performance.now(); playBtn.textContent = '❚❚ Pause'; }
-  function pause() { st.playing = false; playBtn.textContent = '▶ Lecture'; }
+  function play() { if (st.t >= TOTAL - 0.01) st.t = 0; st.playing = true; st.last = performance.now(); playBtn.textContent = '❚❚ Pause'; startLoop(); }
+  function pause() { st.playing = false; playBtn.textContent = '▶ Lecture'; render(); }
   playBtn.addEventListener('click', () => (st.playing ? pause() : play()));
-  chips.addEventListener('click', (e) => { const i = e.target.dataset.i; if (i === undefined) return; st.t = STARTS[+i] + 0.01; play(); });
+  chips.addEventListener('click', (e) => { const i = e.target.dataset.i; if (i === undefined) return; st.t = STARTS[+i] + 0.01; play(); render(); });
   root.querySelector('.film-progress').addEventListener('click', (e) => { const r = e.currentTarget.getBoundingClientRect(); st.t = ((e.clientX - r.left) / r.width) * TOTAL; play(); });
   root.querySelector('[data-film=full]').addEventListener('click', () => {
     const el = root.querySelector('.film-stage');
@@ -360,8 +370,8 @@ export function mountFilm(root) {
   new IntersectionObserver((ents) => {
     ents.forEach((e) => { if (e.isIntersecting && !reduce && st.t === 0 && !st.playing) play(); if (!e.isIntersecting && st.playing && !recBtn.disabled) pause(); });
   }, { threshold: 0.4 }).observe(film);
-  requestAnimationFrame(frame);
-  return { play, pause, state: st, TOTAL };
+  render(); // première image affichée, sans boucle
+  return { play, pause, renderAt, state: st, TOTAL, canvas: film };
 }
 
 // Montage automatique

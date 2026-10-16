@@ -112,7 +112,8 @@ const start = () => {
       S.busy = true;
       const t0 = performance.now();
       try {
-        const preds = (await E.detect(video)).filter((p) => p.score >= E.thr(p.cls));
+        const raw = await E.detect(video); // une seule inférence par cycle
+        const preds = raw.filter((p) => p.score >= E.thr(p.cls));
         const now = performance.now();
         updateTracks(preds, now);
         const dt = now - (S.lastDet || now); S.lastDet = now;
@@ -124,7 +125,7 @@ const start = () => {
           if (m.mean < 55) once('dark', 6000, () => feed('ALERTE · IMAGE TROP SOMBRE → ALLUMEZ LA LUMIÈRE', 'warn'));
           else if (m.satRatio > 0.12 && m.center < m.mean * 0.9) once('back', 6000, () => feed('ALERTE · CONTRE-JOUR → PLACEZ-VOUS DOS AUX FENÊTRES', 'warn'));
           else if (m.sharp < 60) once('blur', 6000, () => feed('ALERTE · IMAGE FLOUE → STABILISEZ L\'APPAREIL', 'warn'));
-          const weak = (await E.detect(video)).filter((p) => p.score >= 0.25 && p.score < E.thr(p.cls));
+          const weak = raw.filter((p) => p.score >= 0.25 && p.score < E.thr(p.cls)); // réutilise l'inférence du cycle
           if (weak.length) once('weak', 8000, () => feed(`${weak.length} OBJET(S) MAL RECONNU(S) → REDRESSEZ-LES OU RAPPROCHEZ-VOUS`, 'warn'));
         }
       } catch (e) { console.warn('[scan]', e); }
