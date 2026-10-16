@@ -32,6 +32,23 @@ const start = () => {
   const ctx = hud.getContext('2d');
   const S = { on: false, tracks: [], counters: {}, busy: false, fps: 0, lastDet: 0, lastQ: 0, raf: 0, timer: 0, sweep: 0 };
   const C = { items: [], pending: [], seq: 0 };
+  // Sauvegarde automatique de l'inventaire dans le navigateur (survit au rechargement de la page)
+  const INV_KEY = 'esc.inventory.v1';
+  function saveInv() {
+    const pack = (i) => ({ ...i, at: i.at && i.at.toISOString(), validatedAt: i.validatedAt && i.validatedAt.toISOString() });
+    const data = { seq: C.seq, items: C.items.map(pack), pending: C.pending.map(pack) };
+    try { localStorage.setItem(INV_KEY, JSON.stringify(data)); return true; }
+    catch { // quota dépassé : on garde les données, sans les vignettes les plus anciennes
+      try { data.items = data.items.map((i, k) => (k < data.items.length - 20 ? { ...i, thumb: '' } : i)); localStorage.setItem(INV_KEY, JSON.stringify(data)); return true; } catch { return false; }
+    }
+  }
+  function loadInv() {
+    try {
+      const d = JSON.parse(localStorage.getItem(INV_KEY) || 'null'); if (!d) return;
+      const un = (i) => ({ ...i, at: i.at ? new Date(i.at) : new Date(), validatedAt: i.validatedAt ? new Date(i.validatedAt) : null });
+      C.seq = d.seq || 0; C.items = (d.items || []).map(un); C.pending = (d.pending || []).map(un);
+    } catch { /* stockage indisponible */ }
+  }
   const addBtns = new Map();
   const A = { on: false, stream: null, ac: null, analyser: null, proc: null, classifier: null, buf: [], bufLen: 0, top: [], level: 0, lastAlert: {} };
 
@@ -340,6 +357,9 @@ const start = () => {
     cap.textContent = C.pending.length ? `⏳ ${C.pending.length} objet(s) à valider` : C.items.length ? `✓ Auditer l'inventaire (${C.items.length})` : '📸 Capturer & auditer';
     const nav = $('#navInvCount'); nav.hidden = !C.items.length; nav.textContent = C.items.length;
     $('#invAudit').disabled = !C.items.length; $('#invClear').disabled = !C.items.length;
+    const ok = saveInv();
+    const msgSaved = !C.items.length && !C.pending.length ? '' : ok ? `✓ Sauvegardé automatiquement dans ce navigateur (${C.items.length} objet(s) en inventaire, ${C.pending.length} à valider)` : '⚠ Sauvegarde locale impossible (navigation privée ?)';
+    ['#invSaved', '#collSaved'].forEach((q) => { const el = $(q); if (el) el.textContent = msgSaved; });
   }
   $('#collGrid').addEventListener('change', (e) => {
     const k = e.target.dataset.key; const it = C.pending.find((i) => i.key === k); if (!it) return;
@@ -377,7 +397,7 @@ const start = () => {
             <dt>Part de l'image</dt><dd>${((i.bbox[2] * i.bbox[3]) / (i.frame[0] * i.frame[1]) * 100).toFixed(1)} % (${i.frame[0]}×${i.frame[1]})</dd>
             <dt>Luminosité locale</dt><dd>${i.lum ?? '—'} %${i.lum !== null && i.lum < 22 ? ' · sombre' : ''}</dd>
             <dt>Modèle</dt><dd class="code">COCO-SSD · ${i.model}</dd>
-            <dt>Ajouté / validé</dt><dd>${fmtDT(i.at)} · ${fmtDT(i.validatedAt)}</dd>
+            <dt>Ajouté / validé</dt><dd>${fmtDT(i.at)} · ${i.validatedAt ? fmtDT(i.validatedAt) : '—'}</dd>
           </dl>
           <button class="btn btn-ghost btn-sm" type="button" data-remove="${i.key}">Retirer de l'inventaire</button>
         </div></article>`;
@@ -424,7 +444,10 @@ const start = () => {
     if (!E.state.stream) await E.startCamera();
     if (!E.state.stream) return;
     stage.classList.remove('frozen'); $('#btnBack').hidden = true;
-    S.on = true; S.tracks = []; S.counters = {}; S.fps = 0; S.lastDet = 0;
+    S.on = true; S.tracks = []; S.fps = 0; S.lastDet = 0;
+    // reprend la numérotation après les objets déjà inventoriés (pas de doublon d'identifiant)
+    S.counters = {};
+    [...C.items, ...C.pending].forEach((i) => { const n = parseInt(String(i.trackId).split('-')[1], 10) || 0; S.counters[i.cls] = Math.max(S.counters[i.cls] || 0, n); });
     stage.classList.add('scan'); ui.hidden = false;
     stage.closest('.audit-layout').classList.add('scanning');
     $('#hudFeed').innerHTML = '';
@@ -460,6 +483,8 @@ const start = () => {
     await E.analyzeFromVideo();
   });
   document.getElementById('btnStop').addEventListener('click', () => { if (S.on) exit(); });
+  loadInv(); renderCollection(); renderInventory();
+  if (location.hash === '#inventaire') renderInventory();
   window.__ESC_SCAN__ = { S, A, C, enter, exit, addTrack };
 };
 
