@@ -268,6 +268,17 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 @media (max-width: 640px) { .adv-head .btn { margin-left: 0; width: 100%; } }
 @media (max-width: 640px) { .adv-row .btn { width: 100%; white-space: normal; } }
 
+/* ---------- Déclencheur sur la vidéo + bouton capture mis en avant ---------- */
+.shutter { position: absolute; z-index: 6; left: 50%; bottom: 18px; transform: translateX(-50%); width: 74px; height: 74px; border-radius: 50%; border: 4px solid #fff; background: rgba(255,255,255,.18); cursor: pointer; display: none; padding: 0; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+.shutter span { display: block; width: 56px; height: 56px; margin: 5px auto; border-radius: 50%; background: #fff; transition: transform .1s ease; }
+.shutter:active span { transform: scale(.88); }
+.stage.cam-on:not(.scan):not(.frozen):not(.pseudo-full) .shutter { display: block; }
+.stage:fullscreen .shutter { display: none !important; }
+.stage.cam-on .frame-guide em { bottom: 104px; }
+.controls { margin-top: 12px; }
+.btn-capture { font-size: .95rem; padding: 13px 26px; box-shadow: 0 6px 18px rgba(91,45,142,.3); }
+@media (max-width: 640px) { .controls .btn.btn-capture { flex: 1 1 100%; order: -1; font-size: .95rem; padding: 14px; } }
+
 /* ---------- Plein écran caméra (natif + secours iPhone) ---------- */
 .stage.pseudo-full { position: fixed; inset: 0; z-index: 300; width: 100vw; height: 100vh; height: 100dvh; max-height: none; aspect-ratio: auto; border-radius: 0; }
 body.no-scroll { overflow: hidden; }

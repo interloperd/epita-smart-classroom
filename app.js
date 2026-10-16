@@ -471,6 +471,7 @@
   $('#fsEnter').addEventListener('click', enterFull);
   $('#fsExit').addEventListener('click', exitFull);
   $('#fsCapture').addEventListener('click', () => { if (state.stream && state.model) capture(); });
+  $('#shutter').addEventListener('click', () => { if (state.stream && state.model) capture(); });
   $('#fsScan').addEventListener('click', () => { const b = document.getElementById('btnScan'); if (b && !b.disabled) b.click(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && els.stage.classList.contains('pseudo-full')) pseudo(false); });
   window.__ESC_FULL__ = { enterFull, exitFull, isFull };

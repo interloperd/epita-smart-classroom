@@ -159,6 +159,7 @@
               <button class="fs-btn" id="fsExit" type="button">✕ Quitter le plein écran</button>
             </div>
             <button class="fs-enter" id="fsEnter" type="button" aria-label="Plein écran">⛶</button>
+            <button class="shutter" id="shutter" type="button" aria-label="Capturer et analyser"><span></span></button>
             <!-- HUD du mode Scan (vidéo temps réel) -->
             <canvas id="hud" aria-hidden="true"></canvas>
             <div class="hud" id="hudUi" hidden>
@@ -194,6 +195,20 @@
               </div>
             </div>
           </div>
+          <div class="controls">
+            <button id="btnCapture" class="btn btn-primary btn-capture" disabled>📸 Capturer &amp; analyser</button>
+            <button id="btnStart" class="btn btn-primary">Démarrer la caméra</button>
+            <button id="btnStop" class="btn btn-ghost" disabled>Arrêter la caméra</button>
+            <label class="btn btn-ghost file-btn">
+              Importer une image
+              <input id="fileInput" type="file" accept="image/*">
+            </label>
+            <button id="btnScan" class="btn btn-primary" disabled>◎ Mode Scan vidéo (temps réel)</button>
+            <button id="btnLive" class="btn btn-ghost" disabled aria-pressed="false" hidden>Détection en direct : off</button>
+            <button id="btnBack" class="btn btn-ghost" hidden>Revenir au direct</button>
+            <button id="btnFullStage" class="btn btn-ghost" type="button">⛶ Plein écran</button>
+            <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
+          </div>
           <div id="cameraMsg" class="alert" role="alert" hidden></div>
 
           <article class="card collection" id="collectionCard" hidden>
@@ -210,20 +225,7 @@
             <p class="muted small" id="collSaved"></p>
           </article>
 
-          <div class="controls">
-            <button id="btnStart" class="btn btn-primary">Démarrer la caméra</button>
-            <button id="btnStop" class="btn btn-ghost" disabled>Arrêter la caméra</button>
-            <button id="btnCapture" class="btn btn-primary" disabled>Capturer &amp; analyser</button>
-            <label class="btn btn-ghost file-btn">
-              Importer une image
-              <input id="fileInput" type="file" accept="image/*">
-            </label>
-            <button id="btnScan" class="btn btn-primary" disabled>◎ Mode Scan vidéo (temps réel)</button>
-            <button id="btnLive" class="btn btn-ghost" disabled aria-pressed="false" hidden>Détection en direct : off</button>
-            <button id="btnBack" class="btn btn-ghost" hidden>Revenir au direct</button>
-            <button id="btnFullStage" class="btn btn-ghost" type="button">⛶ Plein écran</button>
-            <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
-          </div>
+
           <div class="adv-row">
             <label class="check"><input type="checkbox" id="advAuto" checked> <b>Inclure automatiquement l'analyse avancée</b> dans chaque audit</label>
             <button id="btnAdvanced" class="btn btn-ghost btn-sm" type="button" disabled>🔬 Relancer l'analyse avancée</button>
