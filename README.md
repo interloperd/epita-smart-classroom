@@ -11,6 +11,7 @@
 
 EPITA Smart Classroom aide un responsable non technique à vérifier la configuration d'une salle :
 
+0. **Film de présentation** (page d'accueil) — motion design temps réel : téléphone 3D (Three.js) dont l'écran anime chaque module, 10 chapitres (accroche → problème → modules → confiance → appel à l'action), chapitres cliquables, plein écran, **export vidéo WebM** depuis le navigateur.
 0. **Tutoriel de prise en main** — onboarding en 6 étapes au premier lancement (règles de cadrage, lecture des statuts), relançable via le bouton « ? Tuto ».
 
 1. **Prise de vue** — webcam (bouton démarrer / arrêter) ou import d'une image de test autorisée.

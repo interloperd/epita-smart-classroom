@@ -241,6 +241,23 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 .shoot-note { font-size: .78rem; color: var(--muted); margin: 12px 0 0; }
 @media (max-width: 760px) { .stage { aspect-ratio: 3 / 4; max-height: 70vh; } .frame-guide em { font-size: .6rem; } }
 
+/* ---------- Film de présentation ---------- */
+.film { margin: 8px 0 28px; }
+.film-stage { position: relative; border-radius: 20px; overflow: hidden; background: var(--violet-900); box-shadow: 0 30px 80px rgba(42,19,66,.25); }
+.film-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.film-stage:fullscreen { border-radius: 0; display: grid; place-items: center; background: #000; }
+.film-stage:fullscreen .film-canvas { width: 100vw; height: auto; max-height: 100vh; object-fit: contain; }
+.film-stage.is-full { position: fixed; inset: 0; z-index: 300; border-radius: 0; display: grid; place-items: center; background: #000; }
+.film-fallback { padding: 40px; color: var(--violet-200); text-align: center; }
+.film-bar { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.film-progress { flex: 1 1 200px; height: 6px; background: var(--violet-100); border-radius: 3px; cursor: pointer; overflow: hidden; }
+.film-progress span { display: block; height: 100%; width: 0; background: var(--violet); }
+.film-time { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.film-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.film-chips button { font: 500 .72rem var(--font); color: var(--ink-2); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.film-chips button.on { background: var(--violet); color: #fff; border-color: var(--violet); }
+@media (max-width: 640px) { .film-bar .btn { flex: 1 1 auto; } .film-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .film-chips button { white-space: nowrap; } }
+
 /* ---------- Analyse avancée ---------- */
 .adv-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--violet-200); border-radius: 12px; background: #fff; }
 .adv-row .small { flex: 1 1 260px; }

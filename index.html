@@ -10,6 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
   <!-- Bibliothèques de vision (provenance documentée dans le README) -->
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
@@ -17,6 +23,7 @@
   <script defer src="registry.js"></script>
   <script type="module" src="scan.js"></script>
   <script type="module" src="advanced.js"></script>
+  <script type="module" src="film.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -77,6 +84,21 @@
           <button class="btn btn-ghost" type="button" data-tuto>Voir le tutoriel</button>
         </div>
       </div>
+
+      <section class="film" id="filmRoot" aria-label="Film de présentation">
+        <div class="film-stage">
+          <canvas class="film-canvas" aria-label="Film de présentation animé d'EPITA Smart Classroom"></canvas>
+          <p class="film-fallback" hidden>Le film nécessite WebGL : ouvrez la page sur un navigateur récent.</p>
+        </div>
+        <div class="film-bar">
+          <button class="btn btn-primary btn-sm" type="button" data-film="play">▶ Lecture</button>
+          <div class="film-progress" role="progressbar" aria-label="Progression du film"><span></span></div>
+          <span class="film-time">0:00</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-film="full">⛶ Plein écran</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-film="rec">⬇ Télécharger la vidéo</button>
+        </div>
+        <div class="film-chips" aria-label="Chapitres"></div>
+      </section>
 
       <div class="steps">
         <article class="step"><span class="step-n">01</span><h3>Cadrer</h3><p>Orientez la caméra vers le mobilier, ou importez une photo autorisée de la salle.</p></article>
