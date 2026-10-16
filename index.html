@@ -33,6 +33,7 @@
       <button class="nav-btn" data-view="config">Configuration</button>
       <button class="nav-btn" data-view="dashboard">Tableau de bord</button>
       <button class="nav-btn" data-view="rapport">Rapport</button>
+      <a class="nav-btn nav-link" href="vitrine.html">Salle 3D ↗</a>
     </nav>
     <button id="btnTuto" class="tuto-btn" type="button" aria-label="Revoir le tutoriel">? Tuto</button>
     <div id="modelStatus" class="model-status" role="status" aria-live="polite">
@@ -158,6 +159,10 @@
               <thead><tr><th>Catégorie</th><th class="num">Nombre</th><th class="num">Conf. moy.</th></tr></thead>
               <tbody></tbody>
             </table>
+          </article>
+          <article class="card">
+            <h3 class="card-title">Qualité de prise de vue <span id="qualityGrade" class="q-grade"></span></h3>
+            <ul class="q-list" id="qualityList"><li class="muted">Disponible après une analyse.</li></ul>
           </article>
           <article class="card">
             <h3 class="card-title">Détections <span class="muted small" id="detMeta"></span></h3>

@@ -66,7 +66,7 @@
     stream: null, live: false, liveTimer: null,
     raw: [],              // dernières prédictions (personnes déjà retirées)
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
-    imgW: 0, imgH: 0,
+    imgW: 0, imgH: 0, measure: null, quality: null,
     threshold: 0.5,
     auditStart: null, lastDurationS: null,
     config: {}, roomName: 'Salle de démonstration',
@@ -193,6 +193,7 @@
       unfreeze();
       if (!state.auditStart) state.auditStart = performance.now();
       setBadge('Caméra active · rien n\'est enregistré');
+      startMonitor();
     } catch (err) {
       console.warn('[caméra]', err);
       stopCamera();
@@ -203,6 +204,7 @@
 
   function stopCamera() {
     stopLive();
+    stopMonitor();
     if (state.stream) state.stream.getTracks().forEach((t) => t.stop());
     state.stream = null;
     els.video.srcObject = null;
@@ -245,6 +247,8 @@
   // 7. Analyse (capture webcam ou image importée)
   // ------------------------------------------------------------------
   async function analyzeFromCanvas(sourceLabel) {
+    state.imgW = els.frame.width; state.imgH = els.frame.height;
+    state.measure = measureImage(els.frame, state.imgW, state.imgH);
     const t0 = performance.now();
     try {
       state.raw = await detect(els.frame);
@@ -263,6 +267,98 @@
     renderResults();
     pushHistory();
   }
+
+  // ------------------------------------------------------------------
+  // 7 bis. Qualité de prise de vue et détection d'anomalies (règles)
+  // ------------------------------------------------------------------
+  const qCanvas = document.createElement('canvas');
+  /** Mesures photométriques sur une copie réduite (160 px) — rien n'est conservé. */
+  function measureImage(src, w, h) {
+    const W = 160, H = Math.max(1, Math.round((h / w) * W));
+    qCanvas.width = W; qCanvas.height = H;
+    const ctx = qCanvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(src, 0, 0, W, H);
+    const d = ctx.getImageData(0, 0, W, H).data;
+    const g = new Float32Array(W * H);
+    let sum = 0, sum2 = 0, sat = 0, centerSum = 0, centerN = 0;
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const y = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      g[p] = y; sum += y; sum2 += y * y; if (y > 245) sat++;
+      const x = p % W, yy = (p / W) | 0;
+      if (x > W * 0.25 && x < W * 0.75 && yy > H * 0.3 && yy < H * 0.85) { centerSum += y; centerN++; }
+    }
+    const n = W * H, mean = sum / n, std = Math.sqrt(Math.max(0, sum2 / n - mean * mean));
+    let lap = 0, lap2 = 0, ln = 0; // variance du laplacien = netteté
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const p = y * W + x, v = 4 * g[p] - g[p - 1] - g[p + 1] - g[p - W] - g[p + W];
+      lap += v; lap2 += v * v; ln++;
+    }
+    const sharp = ln ? lap2 / ln - (lap / ln) ** 2 : 0;
+    return { mean, std, satRatio: sat / n, center: centerN ? centerSum / centerN : mean, sharp };
+  }
+
+  const iou = (a, b) => {
+    const [ax, ay, aw, ah] = a, [bx, by, bw, bh] = b;
+    const ix = Math.max(0, Math.min(ax + aw, bx + bw) - Math.max(ax, bx));
+    const iy = Math.max(0, Math.min(ay + ah, by + bh) - Math.max(ay, by));
+    const inter = ix * iy; return inter / (aw * ah + bw * bh - inter || 1);
+  };
+
+  /** Liste d'anomalies : { level: 'high'|'mid'|'info', title, advice }. */
+  function assessQuality(m, kept, raw, w, h) {
+    const out = [];
+    if (m.mean < 55) out.push({ level: 'high', code: 'dark', title: 'Image trop sombre', advice: 'Allumez la lumière ou ouvrez les volets, puis recommencez la capture.' });
+    else if (m.mean < 80) out.push({ level: 'mid', code: 'dim', title: 'Éclairage faible', advice: 'Ajoutez de la lumière : la détection sera plus fiable.' });
+    if (m.mean > 215) out.push({ level: 'mid', code: 'bright', title: 'Image surexposée', advice: 'Évitez la lumière directe sur l\'objectif ou baissez l\'éclairage.' });
+    if (m.satRatio > 0.12 && m.center < m.mean * 0.9) out.push({ level: 'high', code: 'backlight', title: 'Contre-jour détecté', advice: 'Placez-vous dos aux fenêtres, ou fermez les stores.' });
+    if (m.std < 22) out.push({ level: 'mid', code: 'contrast', title: 'Contraste faible', advice: 'Le mobilier se distingue mal du fond : changez d\'angle ou d\'éclairage.' });
+    if (m.sharp < 60) out.push({ level: 'mid', code: 'blur', title: 'Image possiblement floue', advice: 'Stabilisez l\'appareil (appuyez-le sur une surface) et refaites la mise au point.' });
+    const mx = w * 0.015, my = h * 0.015;
+    const cut = kept.filter((p) => { const [x, y, bw, bh] = p.bbox; return x <= mx || y <= my || x + bw >= w - mx || y + bh >= h - my; });
+    if (cut.length) out.push({ level: 'mid', code: 'cut', title: `${cut.length} objet(s) coupé(s) par le bord`, advice: 'Reculez ou élargissez le cadre pour voir les objets en entier.' });
+    const weak = raw.filter((p) => p.score >= 0.25 && p.score < state.threshold);
+    if (weak.length) out.push({ level: 'mid', code: 'weak', title: `${weak.length} objet(s) mal reconnu(s)`, advice: 'Redressez les objets renversés ou tournés, dégagez ce qui les masque, ou rapprochez-vous.' });
+    const small = kept.filter((p) => (p.bbox[2] * p.bbox[3]) / (w * h) < 0.004);
+    if (small.length) out.push({ level: 'info', code: 'small', title: `${small.length} objet(s) très petit(s) à l'image`, advice: 'Rapprochez-vous ou faites un audit par zone.' });
+    let overlaps = 0;
+    for (let i = 0; i < kept.length; i++) for (let j = i + 1; j < kept.length; j++) {
+      if (kept[i].cls === kept[j].cls && iou(kept[i].bbox, kept[j].bbox) > 0.5) overlaps++;
+    }
+    if (overlaps) out.push({ level: 'mid', code: 'overlap', title: `${overlaps} chevauchement(s) suspect(s)`, advice: 'Objets empilés ou double détection : vérifiez visuellement, ou changez d\'angle.' });
+    if (!kept.length) out.push({ level: 'high', code: 'none', title: 'Aucun objet reconnu', advice: 'Vérifiez le cadrage (mobilier bien visible), la lumière, ou abaissez le seuil.' });
+    return out;
+  }
+  const qualityGrade = (list) => list.some((a) => a.level === 'high') ? 'Insuffisante'
+    : list.filter((a) => a.level === 'mid').length >= 2 ? 'Moyenne' : list.some((a) => a.level === 'mid') ? 'Correcte' : 'Bonne';
+
+  function renderQuality() {
+    const box = $('#qualityList'), grade = $('#qualityGrade');
+    if (!state.analyzed || !state.measure) { box.innerHTML = '<li class="muted">Disponible après une analyse.</li>'; grade.textContent = ''; return; }
+    const list = assessQuality(state.measure, filtered(), state.raw, state.imgW, state.imgH);
+    state.quality = { grade: qualityGrade(list), list };
+    grade.textContent = state.quality.grade; grade.className = `q-grade q-${state.quality.grade.toLowerCase()}`;
+    box.innerHTML = list.length ? list.map((a) => `<li class="q-${a.level}"><b>${esc(a.title)}</b><span>${esc(a.advice)}</span></li>`).join('')
+      : '<li class="q-ok"><b>Prise de vue de bonne qualité</b><span>Lumière, netteté et cadrage corrects.</span></li>';
+  }
+
+  // Surveillance en direct de la lumière et de la netteté pendant que la caméra tourne
+  let monitorTimer = null;
+  function startMonitor() {
+    clearInterval(monitorTimer);
+    monitorTimer = setInterval(() => {
+      const v = els.video;
+      if (!state.stream || !v.videoWidth || els.stage.classList.contains('frozen')) return;
+      const m = measureImage(v, v.videoWidth, v.videoHeight);
+      const tip = m.mean < 55 ? '⚠ Trop sombre : allumez la lumière'
+        : (m.satRatio > 0.12 && m.center < m.mean * 0.9) ? '⚠ Contre-jour : placez-vous dos aux fenêtres'
+        : m.mean > 215 ? '⚠ Image surexposée'
+        : m.sharp < 60 ? '⚠ Image floue : stabilisez l\'appareil'
+        : 'Caméra active · prise de vue correcte · rien n\'est enregistré';
+      setBadge(tip);
+      els.stageBadge.classList.toggle('warn', tip.startsWith('⚠'));
+    }, 900);
+  }
+  function stopMonitor() { clearInterval(monitorTimer); monitorTimer = null; els.stageBadge.classList.remove('warn'); }
 
   let frameBitmap = null; // copie en mémoire de l'image analysée, pour redessiner les cadres (jamais persistée)
   function redrawFrame() {
@@ -460,6 +556,7 @@
       return `<li class="${below ? 'below' : ''}"><span>${esc(fr(p.cls))}${below ? ' <span class="muted small">(sous le seuil)</span>' : ''}</span><b>${pct(p.score)}</b><div class="bar"><span style="width:${p.score * 100}%"></span></div></li>`;
     }).join('') || '<li class="muted">—</li>';
     $('#detMeta').textContent = state.analyzed ? `· ${a.preds.length} retenue(s) · ${Math.round(state.inferenceMs)} ms` : '';
+    renderQuality();
   }
 
   function renderDashboard() {
@@ -474,8 +571,8 @@
       kpi('Règles vérifiables', a.verifiable.length, `${a.unsupportedRules.length} règle(s) hors modèle`),
       kpi('Écarts observés', state.analyzed ? a.gaps.length : na, 'attendu ≠ détecté'),
       kpi('Taux de détection', a.detRate === null ? na : pct(a.detRate), 'vs. configuration attendue'),
-      kpi('Durée de l\'audit', state.lastDurationS === null ? na : `${state.lastDurationS.toFixed(1)} s`, avgDur === null ? 'moyenne : —' : `moyenne : ${avgDur.toFixed(1)} s sur ${state.history.length} audit(s)`),
-      kpi('Temps d\'inférence', state.inferenceMs === null ? na : `${Math.round(state.inferenceMs)} ms`, state.modelBase),
+      kpi('Durée de l\'audit', state.lastDurationS === null ? na : `${state.lastDurationS.toFixed(1)} s`, (avgDur === null ? 'moyenne : —' : `moyenne : ${avgDur.toFixed(1)} s sur ${state.history.length} audit(s)`) + (state.inferenceMs === null ? '' : ` · inférence ${Math.round(state.inferenceMs)} ms`)),
+      kpi('Qualité de prise de vue', state.quality ? `<span style="font-size:1.4rem;font-weight:500">${state.quality.grade}</span>` : na, state.quality ? `${state.quality.list.length} anomalie(s) signalée(s)` : 'lumière, netteté, cadrage'),
       kpi('Statut global', `<span style="font-size:1.1rem;font-weight:500">${a.global.label}</span>`, state.analyzedAt ? `analyse de ${fmtTime(state.analyzedAt)}` : 'aucune analyse'),
     ].join('');
     const g = $('#globalStatus'); g.className = `status-chip ${a.global.cls}`; g.textContent = a.global.label;
@@ -510,6 +607,7 @@
       if (r.status.code === 'over') rec.push(`${r.label} : ${r.gap} unité(s) en surplus. Vérifier les doublons de détection, le mobilier d'une salle voisine dans le champ, ou mettre à jour la configuration théorique.`);
       if (r.status.code === 'unsupported') rec.push(`${r.label} : catégorie non reconnue par COCO-SSD. Comptage manuel requis (attendu : ${r.expected}).`);
     });
+    (state.quality?.list || []).filter((q) => q.level !== 'info').forEach((q) => rec.push(`Prise de vue — ${q.title} : ${q.advice}`));
     if (a.belowThreshold > 0) rec.push(`${a.belowThreshold} détection(s) sous le seuil de ${pct(state.threshold)} ont été écartées : en cas de doute, les examiner en abaissant temporairement le seuil.`);
     if (state.analyzed && a.verifiable.length && a.gaps.length === 0) rec.push('Aucun écart sur les catégories vérifiables : contrôle complémentaire limité aux catégories hors modèle.');
     rec.push('Pour une salle étendue, réaliser plusieurs audits par zone plutôt qu\'une prise de vue unique.');
@@ -566,14 +664,18 @@
         : `<p>${state.analyzed ? 'Aucun écart sur les catégories vérifiables.' : '—'}</p>`}
       <p class="muted small">Un objet non détecté n'est pas réputé absent : il peut être masqué, mal cadré ou non reconnu.</p>
 
-      <h2>5. Catégories non prises en charge</h2>
+      <h2>5. Qualité de la prise de vue et anomalies</h2>
+      ${!state.quality ? '<p class="muted">—</p>' : `<p>Qualité estimée : <b>${esc(state.quality.grade)}</b>${state.measure ? ` · luminosité ${Math.round(state.measure.mean / 2.55)} % · netteté ${Math.round(state.measure.sharp)}` : ''}.</p>
+        ${state.quality.list.length ? `<ul>${state.quality.list.map((q) => `<li><b>${esc(q.title)}</b> — ${esc(q.advice)}</li>`).join('')}</ul>` : '<p>Aucune anomalie de prise de vue détectée.</p>'}`}
+
+      <h2>6. Catégories non prises en charge</h2>
       <ul>${CATEGORIES.filter((c) => !c.coco.length).map((c) => `<li><b>${esc(c.label)}</b> — ${esc(c.note)}</li>`).join('')}
         <li><b>Personnes</b> — exclues par principe (classe « person » supprimée avant tout traitement).</li></ul>
 
-      <h2>6. Limites de l'analyse</h2>
+      <h2>7. Limites de l'analyse</h2>
       <ul>${LIMITS.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
 
-      <h2>7. Recommandations de contrôle complémentaire</h2>
+      <h2>8. Recommandations de contrôle complémentaire</h2>
       <ul>${recommendations(a).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
       <p class="note">Rapport généré automatiquement par règles programmées · EPITA Smart Classroom · aucune IA générative.</p>`;
   }
@@ -592,11 +694,13 @@
     a.rows.forEach((r) => L.push(`| ${r.label} | ${r.expected ?? '—'} | ${r.detected ?? (r.supported ? '—' : 'n/a')} | ${r.gap === null ? '—' : (r.gap > 0 ? '+' : '') + r.gap} | ${r.status.label} |`));
     L.push('', '## 4. Écarts identifiés');
     if (a.gaps.length) a.gaps.forEach((r) => L.push(`- ${r.label} : attendu ${r.expected}, observé ${r.detected}`)); else L.push('- Aucun');
-    L.push('', '## 5. Catégories non prises en charge');
+    L.push('', '## 5. Qualité de la prise de vue et anomalies');
+    if (state.quality) { L.push(`Qualité estimée : ${state.quality.grade}`); state.quality.list.forEach((q) => L.push(`- ${q.title} — ${q.advice}`)); } else L.push('—');
+    L.push('', '## 6. Catégories non prises en charge');
     CATEGORIES.filter((c) => !c.coco.length).forEach((c) => L.push(`- ${c.label} — ${c.note}`));
-    L.push('- Personnes — exclues par principe', '', '## 6. Limites');
+    L.push('- Personnes — exclues par principe', '', '## 7. Limites');
     LIMITS.forEach((l) => L.push(`- ${l}`));
-    L.push('', '## 7. Recommandations');
+    L.push('', '## 8. Recommandations');
     recommendations(a).forEach((r) => L.push(`- ${r}`));
     return L.join('\n');
   }
