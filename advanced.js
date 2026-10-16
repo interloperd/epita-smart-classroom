@@ -158,7 +158,7 @@ const start = () => {
     preloadDone = true;
     const go = () => getDetector().then(() => { if (!E.state.analyzed) msg.textContent = '✓ Modèle avancé prêt (en cache) : il sera inclus automatiquement dans chaque audit.'; })
       .catch((e) => { preloadDone = false; loading = null; msg.textContent = `Préchargement du modèle avancé impossible (${e.message || e}). Il sera retenté au prochain audit.`; });
-    ('requestIdleCallback' in window) ? requestIdleCallback(go, { timeout: 4000 }) : setTimeout(go, 2500);
+    ('requestIdleCallback' in window) ? requestIdleCallback(go, { timeout: 8000 }) : setTimeout(go, 6000);
   }
   document.addEventListener('esc:analyzed', () => {
     btn.disabled = !E.getFrameBitmap();
@@ -168,7 +168,10 @@ const start = () => {
       run().finally(() => { delete btn.dataset.running; });
     }
   });
-  preload();
+  // préchargement seulement quand l'utilisateur est dans l'Audit et que COCO-SSD est prêt (n'alourdit pas les autres pages)
+  const tryPreload = () => { if (document.getElementById('view-audit').classList.contains('is-active') && E.state.modelState === 'ready') setTimeout(preload, 5000); };
+  document.addEventListener('esc:view', (e) => { if (e.detail === 'audit') { const iv = setInterval(() => { if (E.state.modelState !== 'loading') { clearInterval(iv); tryPreload(); } }, 1000); } });
+  if (location.hash === '#audit') document.dispatchEvent(new CustomEvent('esc:view', { detail: 'audit' }));
 };
 
 if (window.__ESC__) start(); else document.addEventListener('esc:ready', start, { once: true });

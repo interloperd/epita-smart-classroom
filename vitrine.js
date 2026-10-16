@@ -10,7 +10,7 @@ const overlay = $('#overlay3d');
 
 // ---------------------------------------------------------------- Rendu
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); // 1,5 max : net et beaucoup plus léger sur mobile
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -184,6 +184,7 @@ function buildFurniture() {
   doorGroup.visible = cfg.door;
   Object.assign(truth, { tables: nT, chairs: cfg.chairs, laptops: nL, screens: cfg.screen ? 1 : 0, board: cfg.board ? 1 : 0, windows: cfg.windows ? 3 : 0, doors: cfg.door ? 1 : 0 });
   clearDetection();
+  if (typeof invalidate === 'function') invalidate();
 }
 
 // ---------------------------------------------------------------- Lumières
@@ -192,7 +193,7 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight('#FFF4E0', 1.8);
 sun.position.set(-9, 6, 2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 });
 sun.shadow.bias = -0.0008;
 sun.shadow.normalBias = 0.02; // évite l'« acné » d'ombre sur le sol
@@ -214,6 +215,7 @@ function setLight(k) {
   M.glass.emissive.set(k === 'evening' ? '#1B2A55' : '#CFE3F7');
   renderer.toneMappingExposure = L.exposure;
   clearDetection();
+  dirty = true;
 }
 
 // ---------------------------------------------------------------- Caméras
@@ -240,21 +242,32 @@ function resize() {
   camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
   overlay.width = renderer.domElement.width; overlay.height = renderer.domElement.height;
   clearDetection();
+  dirty = true;
 }
 new ResizeObserver(resize).observe(vp);
 
 controls.addEventListener('start', () => { clearDetection(); const f = document.getElementById('vpFsRate'); if (f) f.hidden = true; });
+// Rendu à la demande : on ne redessine que si la vue change (caméra, réglages, lumière) et si la salle est visible
+let dirty = true, visible = true;
+const invalidate = () => { dirty = true; };
+controls.addEventListener('change', invalidate);
+new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) dirty = true; }).observe(vp);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) dirty = true; });
 function loop() {
+  requestAnimationFrame(loop);
+  if (!visible || document.hidden) return;
   if (camAnim) {
+    dirty = true;
     camAnim.t = Math.min(1, camAnim.t + 0.035);
     const e = 1 - Math.pow(1 - camAnim.t, 3);
     camera.position.lerpVectors(camAnim.from.pos, camAnim.to.pos, e);
     controls.target.lerpVectors(camAnim.from.target, camAnim.to.target, e);
     if (camAnim.t >= 1) camAnim = null;
   }
-  controls.update();
+  controls.update(); // amortissement : déclenche « change » tant que la caméra bouge
+  if (!dirty) return;
+  dirty = false;
   renderer.render(scene, camera);
-  requestAnimationFrame(loop);
 }
 
 // ---------------------------------------------------------------- Détection (vraie inférence COCO-SSD)
@@ -330,9 +343,12 @@ function renderTruth() {
   $('#rateNote').textContent = `${sumHit} objet(s) retrouvé(s) sur ${sumReal} vérifiables · ${advDone ? 'COCO-SSD + OWL-ViT' : `COCO-SSD seul, seuil ${Math.round(THRESHOLD * 100)} %`}`;
 }
 
+const loadScript = (src) => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.async = false; el.onload = res; el.onerror = () => rej(new Error('bibliothèques TensorFlow.js / COCO-SSD non chargées')); document.head.appendChild(el); });
 async function ensureModel() {
   if (model) return model;
-  if (typeof window.tf === 'undefined' || typeof window.cocoSsd === 'undefined') throw new Error('bibliothèques TensorFlow.js / COCO-SSD non chargées');
+  // bibliothèques chargées au premier clic sur « Analyser » seulement (page plus légère)
+  if (typeof window.tf === 'undefined') await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+  if (typeof window.cocoSsd === 'undefined') await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
   if (!modelPromise) modelPromise = cocoSsd.load({ base: 'lite_mobilenet_v2' });
   model = await modelPromise;
   return model;

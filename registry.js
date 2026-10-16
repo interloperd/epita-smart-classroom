@@ -90,6 +90,7 @@
       const a = E.computeAudit();
       const msg = $('#saveMsg'); const btn = $('#btnSave');
       const counts = Object.fromEntries([...a.counts.entries()].map(([k, v]) => [k, v.n]));
+      if (st.weather) counts.__meteo = { lieu: st.weather.place, temp: st.weather.temp, ressenti: st.weather.feels, humidite: st.weather.rh, conditions: st.weather.label };
       if (st.ambient) counts.__ambiance = { niveau: st.ambient.level, label: st.ambient.label, sons: st.ambient.top.map((s) => s.name) };
       const audit = {
         room: st.roomName, source: st.source, model: st.modelBase, threshold: st.threshold, total: a.preds.length,

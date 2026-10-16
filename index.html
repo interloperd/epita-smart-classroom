@@ -17,10 +17,10 @@
   } }
   </script>
   <!-- Bibliothèques de vision (provenance documentée dans le README) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+  <!-- TensorFlow.js et COCO-SSD sont chargés à la demande (ouverture de l'Audit), voir app.js -->
   <script defer src="app.js"></script>
   <script defer src="registry.js"></script>
+  <script defer src="weather.js"></script>
   <script type="module" src="scan.js"></script>
   <script type="module" src="advanced.js"></script>
   <script>
@@ -56,6 +56,7 @@
       <button class="nav-btn" data-view="archives">Archives</button>
       <a class="nav-btn nav-link" href="vitrine.html">Salle 3D ↗</a>
     </nav>
+    <span class="weather-chip" id="weatherChip" hidden></span>
     <button id="btnTuto" class="tuto-btn" type="button" aria-label="Revoir le tutoriel">? Tuto</button>
     <div id="modelStatus" class="model-status" role="status" aria-live="polite">
       <span class="dot"></span><span class="txt">Chargement du modèle…</span>
@@ -293,6 +294,7 @@
               <tbody></tbody>
             </table>
           </article>
+          <article class="card weather-card" id="weatherCard" hidden></article>
           <article class="card">
             <h3 class="card-title">Qualité de prise de vue <span id="qualityGrade" class="q-grade"></span></h3>
             <ul class="q-list" id="qualityList"><li class="muted">Disponible après une analyse.</li></ul>

@@ -131,6 +131,21 @@ Les catégories non prises en charge sont affichées comme **« Non vérifiable 
 - Animation du film arrêtée en pause et hors écran ; Three.js chargé seulement à la demande sur l'accueil.
 - Bibliothèques en versions figées (cache navigateur/CDN), aucune étape de build.
 
+## 6 ter. Sécurité
+
+| Mesure | Détail |
+|---|---|
+| HTTPS partout | Cloudflare Pages + en-tête HSTS |
+| En-têtes HTTP (`_headers`) | `nosniff`, `X-Frame-Options: DENY` (anti-clickjacking), `Referrer-Policy`, `Permissions-Policy` (caméra/micro limités au site, géolocalisation interdite) |
+| Injection SQL | Requêtes D1 **paramétrées** (`bind`) uniquement |
+| XSS | Toute donnée saisie ou lue en base est **échappée** avant affichage (`esc`) |
+| Contrôle d'accès API | Code `ACCESS_CODE` (secret Cloudflare), comparaison à temps constant |
+| Validation des entrées | Types, longueurs (`clip`), statuts autorisés, images JPEG/PNG/WebP ≤ 1,5 Mo, requêtes ≤ 2 Mo |
+| Données personnelles | Personnes exclues, IA locale, pas d'audio stocké, image archivée seulement sur choix explicite, suppression possible (droit à l'effacement) |
+| Secrets | Aucun secret dans le code ni le dépôt |
+
+Pistes suivantes : Content-Security-Policy stricte, authentification nominative (Cloudflare Access), limitation de débit (rate limiting) sur l'API.
+
 ## 7. Limites connues
 
 - Modèle généraliste (COCO), non spécialisé pour les salles de cours.

@@ -136,8 +136,11 @@ const start = () => {
   }
 
   // ---------------------------------------------------------- Rendu HUD (60 ips, interpolation des cadres)
-  function draw() {
+  let lastDraw = 0;
+  function draw(ts = 0) {
     if (!S.on) return;
+    if (ts - lastDraw < 32) { S.raf = requestAnimationFrame(draw); return; } // ~30 i/s suffisent pour le HUD
+    lastDraw = ts;
     if (video.videoWidth && (hud.width !== video.videoWidth || hud.height !== video.videoHeight)) { hud.width = video.videoWidth; hud.height = video.videoHeight; }
     const W = hud.width, H = hud.height, s = Math.max(1, W / 960), now = performance.now();
     ctx.clearRect(0, 0, W, H);
@@ -159,12 +162,12 @@ const start = () => {
       const alpha = stale ? 0.35 : fresh ? 0.6 : 1;
       const L = Math.min(w, h) * 0.22;
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = t.collected === 'pending' ? '#FFE9A8' : t.collected ? '#B794E0' : '#FFFFFF'; ctx.lineWidth = 2.4 * s; ctx.shadowColor = '#B794E0'; ctx.shadowBlur = 10 * s;
+      ctx.strokeStyle = t.collected === 'pending' ? '#FFE9A8' : t.collected ? '#B794E0' : '#FFFFFF'; ctx.lineWidth = 2.6 * s;
       ctx.beginPath();
       [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(([cx, cy, dx, dy]) => {
         ctx.moveTo(cx + dx * L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * L);
       });
-      ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.stroke();
       // étiquette
       ctx.font = `600 ${12 * s}px Montserrat, sans-serif`;
       const tag = `${t.collected === 'pending' ? '⏳ ' : t.collected ? '✓ ' : ''}${t.id} ▸ ${TYPE[t.cls] || t.cls.toUpperCase()}${t.collected === 'pending' ? ' · À VALIDER' : t.collected ? ` · INVENTAIRE #${t.collected}` : ''}`;

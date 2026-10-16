@@ -64,7 +64,7 @@
   const MIN_RAW_SCORE = 0.15; // on garde les scores bas pour pouvoir rejouer le seuil sans relancer le modèle
 
   const state = {
-    model: null, modelState: 'loading', modelBase: 'lite_mobilenet_v2',
+    model: null, modelState: 'idle', modelBase: 'lite_mobilenet_v2',
     stream: null, live: false, liveTimer: null,
     raw: [],              // dernières prédictions (personnes déjà retirées)
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
@@ -108,6 +108,7 @@
     $$('.nav-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === view));
     if (view === 'rapport') renderReport();
     if (view === 'dashboard') renderDashboard();
+    if (view === 'audit') requestModel();
     document.dispatchEvent(new CustomEvent('esc:view', { detail: view }));
     if (location.hash !== `#${view}`) history.replaceState(null, '', `#${view}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -124,7 +125,7 @@
     state.modelState = s;
     els.modelStatus.className = `model-status ${s}`;
     els.modelStatus.querySelector('.txt').textContent =
-      s === 'ready' ? `Modèle prêt · ${state.modelBase}` : s === 'error' ? 'Modèle indisponible' : 'Chargement du modèle…';
+      s === 'ready' ? `Modèle prêt · ${state.modelBase}` : s === 'error' ? 'Modèle indisponible' : s === 'idle' ? 'Modèle chargé à l\'ouverture de l\'Audit' : 'Chargement du modèle…';
     els.modelBanner.hidden = s !== 'error';
     els.modelBannerMsg.textContent = msg ? ` (${msg})` : '';
     updateButtons();
@@ -134,11 +135,27 @@
     return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`délai de ${ms / 1000} s dépassé`)), ms))]);
   }
 
+  // Chargement à la demande des bibliothèques de vision (allège l'ouverture du site)
+  const LIBS = ['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js', 'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js'];
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      if ([...document.scripts].some((x) => x.src === src && x.dataset.loaded)) return res();
+      const el = document.createElement('script'); el.src = src; el.async = false;
+      el.onload = () => { el.dataset.loaded = '1'; res(); }; el.onerror = () => rej(new Error('bibliothèques TensorFlow.js / COCO-SSD non chargées — vérifiez la connexion'));
+      document.head.appendChild(el);
+    });
+  }
+  async function ensureLibs() { for (const src of LIBS) { if (src.includes('tfjs@') && window.tf) continue; if (src.includes('coco-ssd') && window.cocoSsd) continue; await loadScript(src); } }
+  let modelRequested = false;
+  function requestModel() { if (!modelRequested) { modelRequested = true; loadModel(); } }
+
   async function loadModel() {
+    modelRequested = true;
     setModelState('loading');
     state.model = null;
     try {
       if (TEST.modelFail) throw new Error('échec simulé — paramètre ?test=model-fail');
+      await ensureLibs();
       if (typeof window.tf === 'undefined' || typeof window.cocoSsd === 'undefined') {
         throw new Error('bibliothèques TensorFlow.js / COCO-SSD non chargées — vérifiez la connexion');
       }
@@ -183,6 +200,7 @@
 
   async function startCamera() {
     hideAlert();
+    requestModel();
     try {
       if (TEST.cameraDenied) throw Object.assign(new Error('refus simulé'), { name: 'NotAllowedError' });
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -417,6 +435,7 @@
   }
 
   async function analyzeFile(file) {
+    requestModel();
     if (!file || !file.type.startsWith('image/')) { showAlert('Format non pris en charge : choisissez une image (JPG, PNG, WebP).'); return; }
     hideAlert();
     if (!state.auditStart) state.auditStart = performance.now();
@@ -440,6 +459,7 @@
     els.stageEmpty.hidden = true;
     freeze();
     setBadge('Image importée · analyse locale');
+    if (!state.model && state.modelState === 'loading') { const t0 = Date.now(); while (state.modelState === 'loading' && Date.now() - t0 < 60000) await new Promise((r) => setTimeout(r, 250)); }
     if (!state.model) { showAlert('Image chargée, mais le modèle est indisponible : analyse impossible pour le moment.'); return; }
     await analyzeFromCanvas('Image importée');
   }
@@ -734,6 +754,7 @@
       </header>
       <p class="exec">${exec}</p>
 
+      ${state.weather ? `<p class="exec" style="margin-top:10px"><strong>Conditions extérieures (${esc(state.weather.place)})</strong> : ${esc(state.weather.icon)} ${esc(state.weather.label)}, ${state.weather.temp.toFixed(1)} °C (ressenti ${state.weather.feels.toFixed(1)} °C), humidité ${Math.round(state.weather.rh)} %, point de rosée ${state.weather.dew} °C, vent ${Math.round(state.weather.wind)} km/h, ${state.weather.day ? 'jour' : 'nuit'}. ${esc(state.weather.tips[0] || '')}</p>` : ''}
       <h2>1. Contexte de l'audit</h2>
       <p>Audit visuel automatisé de la configuration de la salle par détection d'objets (apprentissage supervisé, modèle pré-entraîné COCO-SSD exécuté dans le navigateur). Les valeurs attendues sont fictives et servent à la démonstration. Aucune personne n'a été analysée et aucune image n'a été enregistrée ni transmise.</p>
 
@@ -776,6 +797,7 @@
     L.push(`# Rapport d'audit — ${state.roomName || 'Salle non nommée'}`, '');
     L.push(`- **Date** : ${fmtDate(d)} ${fmtTime(d)}`, `- **Source** : ${state.source || '—'}`, `- **Modèle** : COCO-SSD (${state.modelBase}), TensorFlow.js, inférence locale`,
       `- **Seuil de confiance** : ${pct(state.threshold)}`, `- **Statut global** : ${a.global.label}`, '');
+    if (state.weather) L.push(`**Météo (${state.weather.place})** : ${state.weather.label}, ${state.weather.temp.toFixed(1)} °C, ressenti ${state.weather.feels.toFixed(1)} °C, humidité ${Math.round(state.weather.rh)} %, vent ${Math.round(state.weather.wind)} km/h`, '');
     L.push('## 1. Contexte', 'Audit visuel automatisé par détection d\'objets (modèle pré-entraîné). Valeurs attendues fictives. Aucune personne analysée, aucune image enregistrée.', '');
     L.push('## 2. Objets détectés', '| Objet | Classe COCO | Nombre | Confiance min–max |', '|---|---|---:|---:|');
     [...a.counts.entries()].forEach(([k, e]) => L.push(`| ${fr(k)} | ${k} | ${e.n} | ${pct(e.min)} – ${pct(e.max)} |`));
@@ -881,7 +903,8 @@
     });
   }
   let labelQueued = false;
-  new MutationObserver(() => {
+  new MutationObserver((muts) => {
+    if (muts.every((m) => m.target.closest && m.target.closest('#stage, .hud, #collGrid, #hudCounts, #hudFeed'))) return; // ignore le HUD temps réel
     if (labelQueued) return; labelQueued = true;
     requestAnimationFrame(() => { labelQueued = false; labelTables(); });
   }).observe(document.querySelector('main'), { childList: true, subtree: true });
@@ -898,7 +921,8 @@
     const initial = location.hash.slice(1);
     if (['accueil', 'audit', 'config', 'dashboard', 'rapport', 'inventaire', 'anomalies', 'archives'].includes(initial)) setTimeout(() => show(initial), 0);
     updateButtons();
-    loadModel();
+    setModelState('idle');
+    if (location.hash === '#audit' || TEST.modelFail || TEST.cameraDenied) requestModel();
     if (!store.get('esc.onboarded', false) && params.get('tuto') !== '0') openOb();
     window.addEventListener('beforeunload', stopCamera);
   }
