@@ -116,7 +116,7 @@
         db.lastSavedAt = st.analyzedAt;
         refreshCount();
       } catch (e) {
-        msg.textContent = e.status === 401 ? 'Code d\'accès requis : saisissez-le dans l\'onglet Archives.' : `Échec de l'enregistrement : ${e.message}`;
+        msg.textContent = e.status === 401 ? 'Session expirée : reconnectez-vous (bouton Déconnexion puis connexion admin).' : `Échec de l'enregistrement : ${e.message}`;
         btn.disabled = false;
       }
     }
@@ -238,6 +238,7 @@
     $('#btnSave').addEventListener('click', save);
     document.addEventListener('esc:analyzed', () => { $('#btnSave').disabled = false; $('#saveMsg').textContent = ''; });
     document.addEventListener('esc:view', (e) => { if (e.detail === 'anomalies') renderAnomalies(); if (e.detail === 'archives') renderArchives(); });
+    document.addEventListener('esc:auth', () => { refreshCount(); const v = location.hash.slice(1); if (v === 'anomalies') renderAnomalies(); if (v === 'archives') renderArchives(); });
     window.__ESC_DB__ = { db, buildAnomalies, renderAnomalies, renderArchives };
     connect().then(() => {
       const v = location.hash.slice(1);

@@ -923,7 +923,8 @@
     updateButtons();
     setModelState('idle');
     if (location.hash === '#audit' || TEST.modelFail || TEST.cameraDenied) requestModel();
-    if (!store.get('esc.onboarded', false) && params.get('tuto') !== '0') openOb();
+    const maybeOb = () => { if (!store.get('esc.onboarded', false) && params.get('tuto') !== '0') openOb(); };
+    if (document.body.classList.contains('locked')) document.addEventListener('esc:auth', maybeOb, { once: true }); else maybeOb();
     window.addEventListener('beforeunload', stopCamera);
   }
   init();

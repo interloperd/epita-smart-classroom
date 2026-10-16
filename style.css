@@ -125,7 +125,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 32px; }
 .file-btn { position: relative; overflow: hidden; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-input[type="text"], input[type="number"], select {
+input[type="text"], input[type="number"], input[type="password"], select {
   font: inherit; font-size: .9rem; color: var(--ink); padding: 9px 12px; border: 1px solid var(--line);
   border-radius: 10px; background: #fff; width: 100%;
 }
@@ -240,6 +240,23 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 .shoot-steps span { color: var(--ink-2); font-size: .8rem; }
 .shoot-note { font-size: .78rem; color: var(--muted); margin: 12px 0 0; }
 @media (max-width: 760px) { .stage { aspect-ratio: 3 / 4; max-height: 70vh; } .frame-guide em { font-size: .6rem; } }
+
+/* ---------- Connexion ---------- */
+body.locked { overflow: hidden; }
+body.locked > header, body.locked > main, body.locked > footer, body.locked > .banner, body.locked > .ob { visibility: hidden; }
+.auth-gate { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: radial-gradient(circle at 70% 30%, #5B2D8E 0%, #2A1342 55%, #140a22 100%); }
+.auth-card { width: min(400px, 100%); background: #fff; border-radius: 22px; padding: 32px 30px 24px; box-shadow: 0 30px 80px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 6px; }
+.auth-mark { width: 44px; height: 44px; color: var(--violet); margin-bottom: 6px; }
+.auth-card h1 { font-size: 1.7rem; font-weight: 300; margin-bottom: 2px; }
+.auth-card label { font-size: .8rem; font-weight: 500; margin-top: 10px; }
+.auth-pass { display: flex; gap: 6px; }
+.auth-pass input { flex: 1; }
+.auth-toggle { font: 500 .74rem var(--font); color: var(--violet); background: var(--violet-50); border: 1px solid var(--violet-100); border-radius: 10px; padding: 0 10px; cursor: pointer; }
+.auth-card .btn-block { margin-top: 18px; }
+.auth-msg { min-height: 1.2em; font-size: .82rem; color: var(--violet-900); font-weight: 500; margin: 6px 0 0; }
+.auth-hint { margin: 4px 0 0; } .auth-hint a { color: var(--violet); }
+.auth-user { font-size: .74rem; color: var(--ink-2); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.auth-logout { font: 500 .72rem var(--font); color: var(--violet); background: none; border: 1px solid var(--violet-200); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 
 /* ---------- Météo du campus ---------- */
 .weather-chip { font-size: .74rem; font-weight: 500; color: var(--violet-900); background: var(--violet-50); border: 1px solid var(--violet-100); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }

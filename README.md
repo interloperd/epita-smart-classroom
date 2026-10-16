@@ -93,7 +93,8 @@ Chaque `git push` sur `main` redéploie automatiquement l'application.
 
 | Route | Méthode | Rôle |
 |---|---|---|
-| `/api/health` | GET | état des liaisons |
+| `/api/health` | GET | état des liaisons (public) |
+| `/api/login` · `/api/logout` · `/api/me` | POST · POST · GET | connexion, déconnexion, session en cours |
 | `/api/audits` | GET / POST | liste / enregistrement d'un audit (+ anomalies + image) |
 | `/api/audits/:id` | GET / DELETE | détail / suppression complète |
 | `/api/images/:id` | GET | image d'un audit |
@@ -139,12 +140,15 @@ Les catégories non prises en charge sont affichées comme **« Non vérifiable 
 | En-têtes HTTP (`_headers`) | `nosniff`, `X-Frame-Options: DENY` (anti-clickjacking), `Referrer-Policy`, `Permissions-Policy` (caméra/micro limités au site, géolocalisation interdite) |
 | Injection SQL | Requêtes D1 **paramétrées** (`bind`) uniquement |
 | XSS | Toute donnée saisie ou lue en base est **échappée** avant affichage (`esc`) |
-| Contrôle d'accès API | Code `ACCESS_CODE` (secret Cloudflare), comparaison à temps constant |
+| Authentification | Écran de connexion (démo **admin / admin**), vérifié **côté serveur** (`/api/login`) ; session **cookie HttpOnly, Secure, SameSite=Strict**, signée **HMAC-SHA256**, valable 8 h ; délai anti-force brute ; déconnexion. Identifiants modifiables via `ADMIN_USER` / `ADMIN_PASSWORD` (+ `SESSION_SECRET`) dans Cloudflare |
+| Contrôle d'accès API | Toute route `/api/*` (sauf `health`, `login`, `logout`, `me`) exige une session valide, ou le code `ACCESS_CODE` ; comparaisons à temps constant |
 | Validation des entrées | Types, longueurs (`clip`), statuts autorisés, images JPEG/PNG/WebP ≤ 1,5 Mo, requêtes ≤ 2 Mo |
 | Données personnelles | Personnes exclues, IA locale, pas d'audio stocké, image archivée seulement sur choix explicite, suppression possible (droit à l'effacement) |
 | Secrets | Aucun secret dans le code ni le dépôt |
 
-Pistes suivantes : Content-Security-Policy stricte, authentification nominative (Cloudflare Access), limitation de débit (rate limiting) sur l'API.
+⚠️ `admin / admin` est un identifiant **de démonstration** : en production, définir `ADMIN_PASSWORD` et `SESSION_SECRET` (secrets Cloudflare).
+
+Pistes suivantes : Content-Security-Policy stricte, comptes nominatifs (Cloudflare Access / SSO EPITA), limitation de débit (rate limiting) sur l'API.
 
 ## 7. Limites connues
 
