@@ -94,7 +94,7 @@ const start = () => {
       S.busy = true;
       const t0 = performance.now();
       try {
-        const preds = (await E.detect(video)).filter((p) => p.score >= E.state.threshold);
+        const preds = (await E.detect(video)).filter((p) => p.score >= E.thr(p.cls));
         const now = performance.now();
         updateTracks(preds, now);
         const dt = now - (S.lastDet || now); S.lastDet = now;
@@ -106,7 +106,7 @@ const start = () => {
           if (m.mean < 55) once('dark', 6000, () => feed('ALERTE · IMAGE TROP SOMBRE → ALLUMEZ LA LUMIÈRE', 'warn'));
           else if (m.satRatio > 0.12 && m.center < m.mean * 0.9) once('back', 6000, () => feed('ALERTE · CONTRE-JOUR → PLACEZ-VOUS DOS AUX FENÊTRES', 'warn'));
           else if (m.sharp < 60) once('blur', 6000, () => feed('ALERTE · IMAGE FLOUE → STABILISEZ L\'APPAREIL', 'warn'));
-          const weak = (await E.detect(video)).filter((p) => p.score >= 0.25 && p.score < E.state.threshold);
+          const weak = (await E.detect(video)).filter((p) => p.score >= 0.25 && p.score < E.thr(p.cls));
           if (weak.length) once('weak', 8000, () => feed(`${weak.length} OBJET(S) MAL RECONNU(S) → REDRESSEZ-LES OU RAPPROCHEZ-VOUS`, 'warn'));
         }
       } catch (e) { console.warn('[scan]', e); }
@@ -312,7 +312,7 @@ const start = () => {
     C.seq++;
     const now = performance.now(), cr = crop(t), k = CONFIG_KEY[t.cls];
     C.pending.push({
-      key: `c${C.seq}`, trackId: t.id, cls: t.cls, type: TYPE[t.cls] || t.cls, score: t.score, threshold: E.state.threshold,
+      key: `c${C.seq}`, trackId: t.id, cls: t.cls, type: TYPE[t.cls] || t.cls, score: t.score, threshold: E.thr(t.cls),
       model: E.state.modelBase, at: new Date(), trackedS: (now - t.first) / 1000, hits: t.hits,
       bbox: t.bbox.map(Math.round), frame: [video.videoWidth, video.videoHeight], lum: cr.lum, thumb: cr.thumb,
       category: k ? k[1] : 'Hors référentiel', selected: true,

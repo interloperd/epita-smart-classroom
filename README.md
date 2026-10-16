@@ -21,7 +21,7 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 6. **Mode Scan vidéo (temps réel)** — HUD : suivi des objets avec identifiants stables (CHR-01, TBL-02…), fiche de données par objet, inventaire en direct vs attendu, fil d'alertes, bouton « Capturer & auditer », plein écran.
    - **Inventaire cumulé** : chaque objet détecté affiche « ＋ Ajouter » → étape **À valider** (vignettes à cocher/décocher) → **Inventaire** (onglet dédié, une fiche par objet : vignette, classe, confiance, seuil, marge, durée de suivi, position, luminosité, modèle, horodatage). Chaque objet n'est compté qu'une fois ; l'audit lié à l'inventaire se recalcule automatiquement à chaque ajout ou retrait.
 7. **Ambiance sonore** — niveau sonore relatif et classification anonyme des sons (YAMNet / AudioSet, 521 classes : voix, circulation, alarme, ventilation…) via MediaPipe Audio Classifier. Micro désactivé par défaut, aucun enregistrement, aucune transcription.
-8. **Tolérance d'écart** — seuil de conformité paramétrable (ex. ±10 %).
+8. **Tolérance d'écart et seuil par classe** — seuil de conformité paramétrable (ex. ±10 %) ; seuil de confiance spécifique pour les tables (30 % par défaut), mal reconnues par COCO.
 9. **Base de données Cloudflare** — audits archivés dans **D1**, images dans **R2** (repli dans D1 si R2 n'est pas activé), **registre des anomalies** (gravité, statut Ouverte → En cours → Résolue / Faux positif, commentaire, export CSV), archives avec suppression (droit à l'effacement). Repli automatique en mode local si la base n'est pas liée.
 10. **Rapport d'audit** — généré par règles (sans IA générative), imprimable en PDF ou téléchargeable en Markdown.
 

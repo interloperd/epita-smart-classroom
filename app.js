@@ -68,6 +68,7 @@
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
     imgW: 0, imgH: 0, measure: null, quality: null,
     threshold: 0.5, tolerance: 0,
+    classThr: { 'dining table': 0.3 }, // seuils spécifiques par classe (les tables sortent souvent à 30-45 %)
     auditStart: null, lastDurationS: null,
     config: {}, roomName: 'Salle de démonstration',
     history: [],
@@ -232,7 +233,7 @@
     const v = els.video;
     if (v.videoWidth) {
       try {
-        const preds = (await detect(v)).filter((p) => p.score >= state.threshold);
+        const preds = (await detect(v)).filter((p) => p.score >= thr(p.cls));
         els.overlay.width = v.videoWidth; els.overlay.height = v.videoHeight;
         drawBoxes(els.overlay, preds, false);
       } catch (e) { console.warn('[live]', e); }
@@ -323,7 +324,7 @@
     const mx = w * 0.015, my = h * 0.015;
     const cut = kept.filter((p) => { const [x, y, bw, bh] = p.bbox; return x <= mx || y <= my || x + bw >= w - mx || y + bh >= h - my; });
     if (cut.length) out.push({ level: 'mid', code: 'cut', title: `${cut.length} objet(s) coupé(s) par le bord`, advice: 'Reculez ou élargissez le cadre pour voir les objets en entier.' });
-    const weak = raw.filter((p) => p.score >= 0.25 && p.score < state.threshold);
+    const weak = raw.filter((p) => p.score >= 0.25 && p.score < thr(p.cls));
     if (weak.length) out.push({ level: 'mid', code: 'weak', title: `${weak.length} objet(s) mal reconnu(s)`, advice: 'Redressez les objets renversés ou tournés, dégagez ce qui les masque, ou rapprochez-vous.' });
     const small = kept.filter((p) => (p.bbox[2] * p.bbox[3]) / (w * h) < 0.004);
     if (small.length) out.push({ level: 'info', code: 'small', title: `${small.length} objet(s) très petit(s) à l'image`, advice: 'Rapprochez-vous ou faites un audit par zone.' });
@@ -521,7 +522,9 @@
   // ------------------------------------------------------------------
   // 9. Calculs d'audit (uniquement à partir des détections réelles)
   // ------------------------------------------------------------------
-  const filtered = () => state.raw.filter((p) => p.score >= state.threshold);
+  /** Seuil applicable à une classe : seuil spécifique s'il existe, sinon seuil global. */
+  const thr = (cls) => (state.classThr[cls] ?? state.threshold);
+  const filtered = () => state.raw.filter((p) => p.score >= thr(p.cls));
 
   function countsByClass(preds) {
     const m = new Map();
@@ -568,7 +571,7 @@
     else if (gaps.length === 0) global = { label: 'Conforme sur le périmètre vérifiable', cls: 'status-ok', code: 'ok' };
     else global = { label: `Écarts à vérifier (${gaps.length})`, cls: 'status-warn', code: 'warn' };
 
-    const belowThreshold = state.raw.filter((p) => p.score < state.threshold).length;
+    const belowThreshold = state.raw.filter((p) => p.score < thr(p.cls)).length;
     return { preds, counts, rows, verifiable, gaps, unsupportedRules, detRate, global, belowThreshold };
   }
 
@@ -601,6 +604,11 @@
     store.set('esc.config', state.config);
   });
   $('#roomName').addEventListener('input', (e) => { state.roomName = e.target.value; store.set('esc.room', state.roomName); });
+  $('#thrTables').addEventListener('input', (e) => {
+    const v = Math.min(90, Math.max(10, Number(e.target.value) || 30));
+    state.classThr['dining table'] = v / 100; store.set('esc.thrTables', v);
+    if (state.analyzed) { redrawFrame(); renderResults(); }
+  });
   $('#tolerance').addEventListener('input', (e) => {
     state.tolerance = Math.min(50, Math.max(0, Math.floor(Number(e.target.value) || 0)));
     store.set('esc.tol', state.tolerance);
@@ -627,7 +635,7 @@
 
     const sorted = [...state.raw].sort((x, y) => y.score - x.score);
     $('#detList').innerHTML = sorted.map((p) => {
-      const below = p.score < state.threshold;
+      const below = p.score < thr(p.cls);
       return `<li class="${below ? 'below' : ''}"><span>${esc(fr(p.cls))}${below ? ' <span class="muted small">(sous le seuil)</span>' : ''}</span><b>${pct(p.score)}</b><div class="bar"><span style="width:${p.score * 100}%"></span></div></li>`;
     }).join('') || '<li class="muted">—</li>';
     $('#detMeta').textContent = state.analyzed ? `· ${a.preds.length} retenue(s) · ${Math.round(state.inferenceMs)} ms` : '';
@@ -714,7 +722,7 @@
           <div><span>Date</span>${fmtDate(d)} · ${fmtTime(d)}</div>
           <div><span>Source</span>${esc(state.source || '—')}</div>
           <div><span>Modèle</span>COCO-SSD · ${esc(state.modelBase)}</div>
-          <div><span>Seuil de confiance</span>${pct(state.threshold)}</div>
+          <div><span>Seuil de confiance</span>${pct(state.threshold)} · tables ${pct(thr('dining table'))}</div>
           <div><span>Durée de l'audit</span>${state.lastDurationS === null ? '—' : state.lastDurationS.toFixed(1) + ' s'}</div>
           <div><span>Inférence</span>${state.inferenceMs === null ? '—' : Math.round(state.inferenceMs) + ' ms, locale'}</div>
         </div>
@@ -879,6 +887,7 @@
     state.roomName = store.get('esc.room', state.roomName);
     state.history = store.get('esc.history', []);
     state.tolerance = store.get('esc.tol', 0);
+    const tt = store.get('esc.thrTables', 30); state.classThr['dining table'] = tt / 100; $('#thrTables').value = tt;
     $('#tolerance').value = state.tolerance;
     renderScope(); renderConfig(); renderResults(); renderDashboard();
     const initial = location.hash.slice(1);
@@ -892,7 +901,7 @@
 
   // Exposé pour les tests automatisés uniquement (lecture seule de l'état calculé)
   window.__ESC__ = {
-    computeAudit, state, show, esc, fr, pct, filtered, detect, drawBoxes, measureImage, assessQuality,
+    computeAudit, state, show, thr, esc, fr, pct, filtered, detect, drawBoxes, measureImage, assessQuality,
     getFrameBitmap: () => frameBitmap, startCamera, stopCamera, els,
     analyzeFromVideo: async () => capture(), analyzeCollection,
     refreshCollection(items) { // recalcul dynamique de l'audit quand l'inventaire change

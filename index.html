@@ -261,6 +261,11 @@
           <input id="roomName" type="text" maxlength="60" placeholder="ex. Salle de test — Démo" value="Salle de démonstration">
         </div>
         <div class="param inline">
+          <label for="thrTables">Seuil spécifique « Tables » (%) <span class="muted small">— seuil par classe</span></label>
+          <input id="thrTables" type="number" min="10" max="90" step="5" value="30">
+          <small class="muted">Le modèle reconnaît les tables de cours avec une confiance plus faible (il a appris sur des tables à manger). 30 % par défaut ; les autres objets gardent le seuil global de l'onglet Audit.</small>
+        </div>
+        <div class="param inline">
           <label for="tolerance">Tolérance d'écart (%) <span class="muted small">— seuil de conformité</span></label>
           <input id="tolerance" type="number" min="0" max="50" step="5" value="0">
           <small class="muted">Ex. 10 % : 19 chaises détectées sur 20 attendues = « Conforme (tolérance) ». 0 = comptage exact exigé.</small>
