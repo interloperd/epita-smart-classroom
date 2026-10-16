@@ -186,11 +186,12 @@
         throw Object.assign(new Error('getUserMedia indisponible'), { name: 'Unsupported' });
       }
       state.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
       });
       els.video.srcObject = state.stream;
       await els.video.play();
       els.stageEmpty.hidden = true;
+      els.stage.classList.add('cam-on');
       unfreeze();
       if (!state.auditStart) state.auditStart = performance.now();
       setBadge('Caméra active · rien n\'est enregistré');
@@ -209,6 +210,7 @@
     if (state.stream) state.stream.getTracks().forEach((t) => t.stop());
     state.stream = null;
     els.video.srcObject = null;
+    els.stage.classList.remove('cam-on');
     clearCanvas(els.overlay);
     if (!els.stage.classList.contains('frozen')) { els.stageEmpty.hidden = false; setBadge(null); }
     updateButtons();
@@ -443,6 +445,18 @@
   els.btnCapture.addEventListener('click', capture);
   els.btnBack.addEventListener('click', () => { unfreeze(); setBadge('Caméra active · rien n\'est enregistré'); });
   els.fileInput.addEventListener('change', (e) => analyzeFile(e.target.files[0]));
+  // Plein écran et grille de cadrage
+  $('#btnFullStage').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (els.stage.requestFullscreen) els.stage.requestFullscreen().catch(() => {});
+  });
+  const grid = $('#frameGuide'), tGrid = $('#tGrid');
+  tGrid.checked = store.get('esc.grid', true); grid.classList.toggle('on', tGrid.checked);
+  tGrid.addEventListener('change', () => { grid.classList.toggle('on', tGrid.checked); store.set('esc.grid', tGrid.checked); });
+  // Le guide se replie une fois lu (mémorisé par navigateur)
+  const guide = $('#shootGuide');
+  if (store.get('esc.guideClosed', false)) guide.open = false;
+  guide.addEventListener('toggle', () => store.set('esc.guideClosed', !guide.open));
 
   els.threshold.addEventListener('input', () => {
     state.threshold = parseFloat(els.threshold.value);

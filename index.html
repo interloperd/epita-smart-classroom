@@ -122,6 +122,12 @@
             <div class="stage-empty" id="stageEmpty">
               <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="12" width="40" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="24" cy="26" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M16 12 l3-5 h10 l3 5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
               <p>Démarrez la caméra ou importez une image de test.</p>
+              <p class="small">Astuce : placez-vous dans un coin de la salle, à hauteur d'épaule, dos aux fenêtres.</p>
+            </div>
+            <div class="frame-guide" id="frameGuide" aria-hidden="true">
+              <span class="fg-v1"></span><span class="fg-v2"></span><span class="fg-h1"></span><span class="fg-h2"></span>
+              <span class="fg-c tl"></span><span class="fg-c tr"></span><span class="fg-c bl"></span><span class="fg-c br"></span>
+              <em>Gardez le mobilier dans le cadre · sol en bas, murs en haut</em>
             </div>
             <div class="stage-badge" id="stageBadge" hidden></div>
             <!-- HUD du mode Scan (vidéo temps réel) -->
@@ -171,7 +177,22 @@
             <button id="btnScan" class="btn btn-primary" disabled>◎ Mode Scan vidéo (temps réel)</button>
             <button id="btnLive" class="btn btn-ghost" disabled aria-pressed="false" hidden>Détection en direct : off</button>
             <button id="btnBack" class="btn btn-ghost" hidden>Revenir au direct</button>
+            <button id="btnFullStage" class="btn btn-ghost" type="button">⛶ Plein écran</button>
+            <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
           </div>
+
+          <details class="card shoot-guide" id="shootGuide" open>
+            <summary><span class="card-title">Guide de prise de vue</span><span class="muted small">6 règles pour un audit fiable · cliquer pour replier</span></summary>
+            <ol class="shoot-steps">
+              <li><b>💡 Allumez la lumière</b><span>Plafonniers allumés, stores à moitié fermés. Une image sombre fait chuter la détection.</span></li>
+              <li><b>🪟 Dos aux fenêtres</b><span>Jamais face à une fenêtre : le contre-jour transforme le mobilier en silhouettes.</span></li>
+              <li><b>📐 Depuis un coin, à hauteur d'épaule</b><span>Environ 1,5 m de haut, appareil légèrement incliné vers le bas : on voit les plateaux des tables et les dossiers.</span></li>
+              <li><b>↔️ Reculez pour tout cadrer</b><span>Les objets coupés par le bord de l'image ne sont pas comptés. Utilisez le grand angle (0,5×) sur téléphone.</span></li>
+              <li><b>✋ Stable et sans personne</b><span>Appuyez l'appareil sur un support. Attendez que la salle soit vide ou cadrez hors des zones occupées.</span></li>
+              <li><b>🚶 Grande salle : mode Scan</b><span>Avancez rangée par rangée, cliquez sur « ＋ Ajouter » pour chaque objet, validez, puis auditez l'inventaire. Chaque objet n'est compté qu'une fois.</span></li>
+            </ol>
+            <p class="shoot-note">Le bandeau sur la vidéo vous prévient en direct (« trop sombre », « contre-jour », « flou »). Après une capture, la carte « Qualité de prise de vue » vous dit quoi corriger.</p>
+          </details>
 
           <div class="params card">
             <div class="param">
