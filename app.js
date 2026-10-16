@@ -23,22 +23,22 @@
 
   /** Catégories cibles du sujet. coco = [] ⇒ non prise en charge par le modèle. */
   const CATEGORIES = [
-    { key: 'tables',  label: 'Tables et bureaux',     coco: ['dining table'], support: 'partial', example: 10,
+    { key: 'tables',  label: 'Tables et bureaux',     coco: ['dining table'], adv: ['desk'], support: 'partial', example: 10,
       note: 'Classe « dining table » : bureaux et tables de cours reconnus de façon imparfaite.' },
     { key: 'chairs',  label: 'Chaises',               coco: ['chair'],        support: 'yes',     example: 20 },
-    { key: 'board',   label: 'Tableau',               coco: [],               support: 'no',      example: 1,
+    { key: 'board',   label: 'Tableau',               coco: [], adv: ['whiteboard'], support: 'no',      example: 1,
       note: 'Aucune classe « tableau / whiteboard » dans COCO.' },
     { key: 'laptops', label: 'Ordinateurs portables', coco: ['laptop'],       support: 'yes',     example: 5 },
     { key: 'screens', label: 'Écrans',                coco: ['tv'],           support: 'partial', example: null,
       note: 'Classe « tv » : moniteurs et écrans assimilés.' },
-    { key: 'windows', label: 'Fenêtres',              coco: [],               support: 'no',      example: null,
+    { key: 'windows', label: 'Fenêtres',              coco: [], adv: ['window'], support: 'no',      example: null,
       note: 'Aucune classe « window » dans COCO.' },
   ];
 
   /** Libellés français des autres équipements reconnaissables en salle. */
   const FR = {
     'chair': 'Chaise', 'dining table': 'Table / bureau', 'laptop': 'Ordinateur portable', 'tv': 'Écran',
-    'keyboard': 'Clavier', 'mouse': 'Souris', 'book': 'Livre', 'clock': 'Horloge', 'potted plant': 'Plante',
+    'keyboard': 'Clavier', 'mouse': 'Souris', 'book': 'Livre', 'clock': 'Horloge', 'desk': 'Table / bureau (OWL-ViT)', 'whiteboard': 'Tableau (OWL-ViT)', 'window': 'Fenêtre (OWL-ViT)', 'potted plant': 'Plante',
     'couch': 'Canapé', 'bench': 'Banc', 'backpack': 'Sac à dos', 'handbag': 'Sac', 'cell phone': 'Téléphone',
     'bottle': 'Bouteille', 'cup': 'Tasse', 'remote': 'Télécommande', 'vase': 'Vase', 'scissors': 'Ciseaux',
     'refrigerator': 'Réfrigérateur', 'microwave': 'Micro-ondes', 'sink': 'Évier', 'umbrella': 'Parapluie',
@@ -68,7 +68,7 @@
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
     imgW: 0, imgH: 0, measure: null, quality: null,
     threshold: 0.5, tolerance: 0,
-    classThr: { 'dining table': 0.3 }, // seuils spécifiques par classe (les tables sortent souvent à 30-45 %)
+    classThr: { 'dining table': 0.3, desk: 0.1, whiteboard: 0.1, window: 0.1 }, advancedDone: false, // seuils spécifiques par classe (les tables sortent souvent à 30-45 %)
     auditStart: null, lastDurationS: null,
     config: {}, roomName: 'Salle de démonstration',
     history: [],
@@ -251,7 +251,7 @@
   // 7. Analyse (capture webcam ou image importée)
   // ------------------------------------------------------------------
   async function analyzeFromCanvas(sourceLabel) {
-    state.collectionMode = false;
+    state.collectionMode = false; state.advancedDone = false;
     state.imgW = els.frame.width; state.imgH = els.frame.height;
     state.measure = measureImage(els.frame, state.imgW, state.imgH);
     const t0 = performance.now();
@@ -386,7 +386,7 @@
       freeze();
       setBadge('Collection auditée · image de contexte');
     }
-    state.collectionMode = true;
+    state.collectionMode = true; state.advancedDone = false;
     state.imgW = els.frame.width; state.imgH = els.frame.height;
     state.measure = state.imgW ? measureImage(els.frame, state.imgW, state.imgH) : null;
     state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
@@ -542,8 +542,9 @@
     const rows = CATEGORIES.map((c) => {
       const raw = state.config[c.key];
       const expected = raw === '' || raw === null || raw === undefined || Number.isNaN(Number(raw)) ? null : Number(raw);
-      const supported = c.coco.length > 0;
-      const detected = supported && state.analyzed ? c.coco.reduce((s, k) => s + (counts.get(k)?.n || 0), 0) : null;
+      const classes = [...c.coco, ...(state.advancedDone ? (c.adv || []) : [])];
+      const supported = classes.length > 0;
+      const detected = supported && state.analyzed ? classes.reduce((s, k) => s + (counts.get(k)?.n || 0), 0) : null;
       let status, gap = null;
       if (expected === null) status = { code: 'unset', label: 'Non contrôlé', cls: 'status-na', sym: '—' };
       else if (!supported) status = { code: 'unsupported', label: 'Non vérifiable (hors modèle)', cls: 'status-na', sym: '∅' };
@@ -721,7 +722,7 @@
         <div class="meta">
           <div><span>Date</span>${fmtDate(d)} · ${fmtTime(d)}</div>
           <div><span>Source</span>${esc(state.source || '—')}</div>
-          <div><span>Modèle</span>COCO-SSD · ${esc(state.modelBase)}</div>
+          <div><span>Modèle</span>COCO-SSD · ${esc(state.modelBase)}${state.advancedDone ? ' + OWL-ViT' : ''}</div>
           <div><span>Seuil de confiance</span>${pct(state.threshold)} · tables ${pct(thr('dining table'))}</div>
           <div><span>Durée de l'audit</span>${state.lastDurationS === null ? '—' : state.lastDurationS.toFixed(1) + ' s'}</div>
           <div><span>Inférence</span>${state.inferenceMs === null ? '—' : Math.round(state.inferenceMs) + ' ms, locale'}</div>
@@ -753,7 +754,7 @@
       ${state.ambient ? `<p><b>Ambiance sonore</b> (catégories anonymes, aucun enregistrement) : niveau ${esc(state.ambient.label)} (${state.ambient.level}/100)${state.ambient.top.length ? ` · ${state.ambient.top.map((s) => `${esc(s.name)} ${Math.round(s.score * 100)} %`).join(', ')}` : ''}.</p>` : ''}
 
       <h2>6. Catégories non prises en charge</h2>
-      <ul>${CATEGORIES.filter((c) => !c.coco.length).map((c) => `<li><b>${esc(c.label)}</b> — ${esc(c.note)}</li>`).join('')}
+      <ul>${CATEGORIES.filter((c) => !c.coco.length).map((c) => `<li><b>${esc(c.label)}</b> — ${state.advancedDone ? 'absent de COCO, vérifié par l\'analyse avancée OWL-ViT (détection zéro-shot, fiabilité moindre : contrôle visuel conseillé).' : esc(c.note)}</li>`).join('')}
         <li><b>Personnes</b> — exclues par principe (classe « person » supprimée avant tout traitement).</li></ul>
 
       <h2>7. Limites de l'analyse</h2>
@@ -781,7 +782,7 @@
     L.push('', '## 5. Qualité de la prise de vue et anomalies');
     if (state.quality) { L.push(`Qualité estimée : ${state.quality.grade}`); state.quality.list.forEach((q) => L.push(`- ${q.title} — ${q.advice}`)); } else L.push('—');
     L.push('', '## 6. Catégories non prises en charge');
-    CATEGORIES.filter((c) => !c.coco.length).forEach((c) => L.push(`- ${c.label} — ${c.note}`));
+    CATEGORIES.filter((c) => !c.coco.length).forEach((c) => L.push(`- ${c.label} — ${state.advancedDone ? 'vérifié par analyse avancée OWL-ViT (zéro-shot)' : c.note}`));
     L.push('- Personnes — exclues par principe', '', '## 7. Limites');
     LIMITS.forEach((l) => L.push(`- ${l}`));
     L.push('', '## 8. Recommandations');
@@ -904,6 +905,13 @@
     computeAudit, state, show, thr, esc, fr, pct, filtered, detect, drawBoxes, measureImage, assessQuality,
     getFrameBitmap: () => frameBitmap, startCamera, stopCamera, els,
     analyzeFromVideo: async () => capture(), analyzeCollection,
+    /** Ajoute les détections de l'analyse avancée (OWL-ViT) à l'analyse courante. */
+    addAdvanced(preds) {
+      state.raw = state.raw.filter((p) => !['desk', 'whiteboard', 'window'].includes(p.cls)).concat(preds);
+      state.advancedDone = true;
+      redrawFrame(); renderResults(); renderDashboard();
+      document.dispatchEvent(new CustomEvent('esc:analyzed'));
+    },
     refreshCollection(items) { // recalcul dynamique de l'audit quand l'inventaire change
       state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
       state.source = `Scan cumulé (${items.length} objet(s) collecté(s))`;

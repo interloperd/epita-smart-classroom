@@ -23,7 +23,8 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 7. **Ambiance sonore** — niveau sonore relatif et classification anonyme des sons (YAMNet / AudioSet, 521 classes : voix, circulation, alarme, ventilation…) via MediaPipe Audio Classifier. Micro désactivé par défaut, aucun enregistrement, aucune transcription.
 8. **Tolérance d'écart et seuil par classe** — seuil de conformité paramétrable (ex. ±10 %) ; seuil de confiance spécifique pour les tables (30 % par défaut), mal reconnues par COCO.
 9. **Base de données Cloudflare** — audits archivés dans **D1**, images dans **R2** (repli dans D1 si R2 n'est pas activé), **registre des anomalies** (gravité, statut Ouverte → En cours → Résolue / Faux positif, commentaire, export CSV), archives avec suppression (droit à l'effacement). Repli automatique en mode local si la base n'est pas liée.
-10. **Rapport d'audit** — généré par règles (sans IA générative), imprimable en PDF ou téléchargeable en Markdown.
+10. **Analyse avancée « open-vocabulary »** — bouton « 🔬 Analyse avancée » : **OWL-ViT** (Google) via **Transformers.js 3.8.1** (Hugging Face), modèle `Xenova/owlvit-base-patch32` quantifié 8 bits (~155 Mo, téléchargé une fois puis mis en cache). Détection zéro-shot par description textuelle (« a classroom desk », « a whiteboard », « a window ») : complète COCO-SSD sur les **tables**, et rend le **tableau** et les **fenêtres** vérifiables. Dédoublonnage par IoU avec les tables COCO.
+11. **Rapport d'audit** — généré par règles (sans IA générative), imprimable en PDF ou téléchargeable en Markdown.
 
 ### Site vitrine et salle 3D
 
@@ -38,6 +39,7 @@ EPITA Smart Classroom aide un responsable non technique à vérifier la configur
 | Modèle | COCO-SSD **2.2.3** (`lite_mobilenet_v2` par défaut, `mobilenet_v2` en option) | `https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js` — dépôt : [tensorflow/tfjs-models/coco-ssd](https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd). Les poids sont téléchargés par la bibliothèque depuis le stockage public de Google (`storage.googleapis.com/tfjs-models`). |
 | 3D (vitrine) | Three.js **0.160.0** + OrbitControls | `https://cdn.jsdelivr.net/npm/three@0.160.0/` (importmap) |
 | Audio | MediaPipe Tasks Audio **0.10.14** + modèle YAMNet (float32 v1) | `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@0.10.14/` · `storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/` |
+| Vision avancée | Transformers.js **3.8.1** + OWL-ViT (`Xenova/owlvit-base-patch32`, q8) | `https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1` · poids sur huggingface.co |
 | Backend | Cloudflare Pages Functions (`functions/api/*`) + D1 + R2 | intégrés au projet Pages |
 | Typographie | Montserrat (Google Fonts) | `fonts.googleapis.com` |
 | Code & versions | GitHub | ce dépôt |
@@ -107,8 +109,8 @@ COCO-SSD détecte 80 classes COCO. Correspondance avec les catégories du sujet 
 | Tables et bureaux | `dining table` | ⚠️ partielle (bureaux reconnus imparfaitement) |
 | Ordinateurs portables | `laptop` | ✅ |
 | Écrans | `tv` | ⚠️ partielle (moniteurs assimilés à « tv ») |
-| Tableau | — | ❌ non prise en charge |
-| Fenêtres | — | ❌ non prise en charge |
+| Tableau | — (OWL-ViT : « a whiteboard ») | ❌ COCO · ⚠️ via analyse avancée |
+| Fenêtres | — (OWL-ViT : « a window ») | ❌ COCO · ⚠️ via analyse avancée |
 | Autres | `keyboard`, `mouse`, `book`, `clock`, `potted plant`, `cell phone`, `backpack`… | selon le modèle |
 
 Les catégories non prises en charge sont affichées comme **« Non vérifiable (hors modèle) »** et renvoyées vers un contrôle manuel. **Aucune détection n'est inventée.**

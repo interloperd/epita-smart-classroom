@@ -88,6 +88,7 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | Vision | TensorFlow.js 4.22.0 + COCO-SSD 2.2.3 | Détection de 80 classes, `lite_mobilenet_v2` (rapide) ou `mobilenet_v2` (précis) |
 | Règles | `app.js` (fonction `computeAudit`) | Calcul des écarts, des statuts et des KPI |
 | Qualité | `measureImage` / `assessQuality` | Luminosité, contraste, netteté (variance du laplacien), contre-jour, objets coupés, faibles ou superposés |
+| Vision avancée | Transformers.js 3.8.1 + OWL-ViT (q8, 155 Mo) | Détection zéro-shot par texte : tables de cours, tableau, fenêtres ; dédoublonnage IoU avec COCO |
 | Vitrine 3D | Three.js 0.160.0 | Salle de synthèse configurable, détection sur la vue, vérité terrain |
 | Mode Scan | `scan.js` | Suivi multi-objets par IoU, identifiants stables, HUD, alertes temps réel |
 | Son | MediaPipe Audio Classifier + YAMNet | 521 classes AudioSet, niveau sonore relatif, aucune donnée conservée |
@@ -149,7 +150,8 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | US21 | En tant que responsable, je veux **archiver les audits** (avec image si autorisé) dans une base, afin d'en garder la trace. | Must | ✅ Fait |
 | US22 | Je veux un **registre des anomalies** (gravité, statut, commentaire, export CSV), afin de piloter les actions correctives jusqu'à leur résolution. | Must | ✅ Fait |
 | US23 | Je veux **agréger plusieurs prises de vue** pour une grande salle, en **validant chaque objet une seule fois** (Ajouter → À valider → Inventaire, avec fiche par objet), afin d'éviter le double comptage. | Should | ✅ Fait |
-| US24 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
+| US24 | Je veux **détecter les tables de cours, le tableau et les fenêtres** grâce à un second modèle « open-vocabulary » (OWL-ViT, zéro-shot), en complément de COCO-SSD. | Should | ✅ Fait (analyse avancée) |
+| US25 | Je veux un modèle **fine-tuné** sur des salles EPITA annotées. | Could | ⏳ Backlog |
 
 **Planning sur 4 heures :**
 
@@ -202,6 +204,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T15 | Mode Scan : suivi, identifiants, alertes, capture | IDs stables (CHR-01…), alerte « objet mal reconnu », capture → audit complet | ✅ Conforme (caméra virtuelle) |
 | T16 | Registre : changement de statut et commentaire | KPI recalculés (taux de résolution), persistance en base | ✅ Conforme |
 | T19 | Seuil par classe : table détectée à 40 %, seuil global 50 % | Table retenue (seuil tables 30 %), chaise à 40 % écartée | ✅ Conforme |
+| T20 | Analyse avancée OWL-ViT (pipeline simulé) : bureau recouvrant une table COCO, 2 requêtes sur le même bureau, tableau, fenêtre sous le seuil | Doublon écarté, requêtes fusionnées (NMS) → +1 table ; Tableau « Conforme » ; 1 fenêtre ; fenêtre à 5 % ignorée | ✅ Conforme (logique ; inférence réelle à valider en ligne) |
 | T17 | Tolérance d'écart | Écart dans la tolérance → « Conforme (tolérance) » | ✅ Conforme |
 | T18 | Inventaire cumulé : ajouter 4 objets, en décocher 1, valider, retirer 1 | 3 objets en inventaire puis 2 ; audit lié recalculé automatiquement (3 → 2) | ✅ Conforme |
 | T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |
@@ -251,7 +254,7 @@ La salle 3D (`vitrine.html`) fournit un **jeu de test synthétique annoté** : l
 ### 6.3 Recommandations (prochaines étapes)
 1. **Mesurer :** annoter 20 photos de salles EPITA (comptages réels) et calculer K1 par catégorie et par variante du modèle.
 2. **Fiabiliser :** proposer un audit en plusieurs zones (une prise de vue par rangée), avec une configuration par zone.
-3. **Spécialiser :** si K1 est inférieur à 70 %, faire un fine-tuning sur un jeu annoté interne, avec des classes « tableau » et « fenêtre ».
+3. **Spécialiser :** l'analyse avancée OWL-ViT couvre déjà tableau et fenêtres en zéro-shot ; si K1 reste inférieur à 70 %, faire un fine-tuning (COCO-SSD ou YOLO) sur un jeu annoté interne.
 4. **Industrialiser :** référentiel des salles (configuration par salle), archivage des rapports, intégration à l'outil de gestion des salles.
 
 ---

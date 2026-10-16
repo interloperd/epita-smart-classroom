@@ -16,6 +16,7 @@
   <script defer src="app.js"></script>
   <script defer src="registry.js"></script>
   <script type="module" src="scan.js"></script>
+  <script type="module" src="advanced.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -185,6 +186,10 @@
             <button id="btnBack" class="btn btn-ghost" hidden>Revenir au direct</button>
             <button id="btnFullStage" class="btn btn-ghost" type="button">⛶ Plein écran</button>
             <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
+          </div>
+          <div class="adv-row">
+            <button id="btnAdvanced" class="btn btn-ghost" type="button" disabled>🔬 Analyse avancée : tables, tableau, fenêtres (OWL-ViT)</button>
+            <span class="muted small" id="advMsg">Modèle « open-vocabulary » complémentaire (Google OWL-ViT via Transformers.js), à lancer sur une image capturée. Premier lancement : téléchargement du modèle, puis mis en cache.</span>
           </div>
 
           <details class="card shoot-guide" id="shootGuide" open>
