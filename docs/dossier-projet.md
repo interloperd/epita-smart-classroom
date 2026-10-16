@@ -45,21 +45,20 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | **Équipe IT / support** | Contrôler écrans et ordinateurs portables | Détection, rapport |
 
 ### 1.4 Périmètre du MVP
-- **Inclus :** tutoriel de prise en main (onboarding) · diagnostic de qualité de prise de vue et détection d'anomalies · site vitrine avec salle de classe 3D de test · accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
+- **Inclus :** mode Scan vidéo temps réel · ambiance sonore anonyme (YAMNet) · tolérance d'écart · base Cloudflare D1/R2 · registre des anomalies et archives · tutoriel de prise en main (onboarding) · diagnostic de qualité de prise de vue et détection d'anomalies · site vitrine avec salle de classe 3D de test · accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
 - **Exclus (assumé) :**
   - toute analyse, identification ou comptage des personnes ;
-  - l'enregistrement d'images ou de vidéos ;
+  - l'enregistrement de vidéos et d'audio (seules des images fixes, sur action explicite) ;
   - l'entraînement ou le fine-tuning d'un modèle ;
-  - le backend, les comptes utilisateurs et la base de données ;
+  - les comptes utilisateurs nominatifs (accès protégé par un code partagé) ;
   - l'IA générative pour rédiger le rapport ;
-  - l'agrégation de plusieurs prises de vue en un seul comptage (risque de doublons) ;
   - la détection du tableau et des fenêtres (absents de COCO).
 
 ---
 
 ## 2. Architecture
 
-**Choix structurant : tout se passe dans le navigateur.** Pas de serveur, donc aucun flux d'images à protéger, un coût d'hébergement nul et une conformité RGPD acquise dès la conception.
+**Choix structurant : l'IA tourne dans le navigateur, la base est optionnelle.** L'inférence (vision et son) est locale : aucun flux vidéo ou audio ne quitte l'appareil. Seul ce que l'utilisateur décide d'archiver (résultats chiffrés, anomalies et, s'il le choisit, une image fixe) est envoyé à l'API Cloudflare (Pages Functions → D1 / R2).
 
 ```
 ┌──────────────────────────── Navigateur de l'utilisateur ────────────────────────────┐
@@ -90,6 +89,10 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | Règles | `app.js` (fonction `computeAudit`) | Calcul des écarts, des statuts et des KPI |
 | Qualité | `measureImage` / `assessQuality` | Luminosité, contraste, netteté (variance du laplacien), contre-jour, objets coupés, faibles ou superposés |
 | Vitrine 3D | Three.js 0.160.0 | Salle de synthèse configurable, détection sur la vue, vérité terrain |
+| Mode Scan | `scan.js` | Suivi multi-objets par IoU, identifiants stables, HUD, alertes temps réel |
+| Son | MediaPipe Audio Classifier + YAMNet | 521 classes AudioSet, niveau sonore relatif, aucune donnée conservée |
+| API | Cloudflare Pages Functions | REST : audits, images, anomalies, health ; code d'accès optionnel |
+| Données | Cloudflare D1 (SQL) + R2 (objets) | Tables `audits`, `anomalies`, `images` (repli) |
 | Rapport | Gabarit à règles | 8 sections, impression PDF, export Markdown |
 | Versionnement | GitHub | Code, commits, README, issues |
 | Hébergement | Cloudflare Pages | URL publique HTTPS (nécessaire pour la caméra) |
@@ -105,6 +108,17 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | Détecté > attendu | À vérifier — surplus |
 
 ---
+
+### 2.1 Gestion des données
+
+| Donnée | Où | Quand | Durée / droits |
+|---|---|---|---|
+| Flux vidéo, son du micro | Mémoire du navigateur | Pendant l'analyse | Jamais stocké ni transmis |
+| Résultats d'audit (comptages, statuts, qualité, ambiance) | D1 `audits` | Clic « Enregistrer » | Jusqu'à suppression (Archives) |
+| Anomalies (gravité, statut, commentaire) | D1 `anomalies` | Générées à l'enregistrement | Cycle Ouverte → Résolue |
+| Image fixe de la salle | R2 (ou D1 `images`) | Option « Joindre l'image » cochée + confirmation « aucune personne visible » | Supprimée avec l'audit |
+
+Règles : pas de personne sur les images archivées (confirmation explicite), aucune donnée audio conservée, accès protégé par code (`ACCESS_CODE`), droit à l'effacement depuis l'interface, stockage autorisé par l'enseignant pour l'exercice.
 
 ## 3. Backlog
 
@@ -129,8 +143,13 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | US15 | En tant que nouvel utilisateur, je veux un **tutoriel de prise en main** (onboarding en 6 étapes) au premier lancement, afin d'utiliser l'outil correctement et de respecter les règles de cadrage. | Should | ✅ Fait |
 | US16 | Je veux être **alerté si la prise de vue est mauvaise** (trop sombre, contre-jour, flou, objet coupé, mal reconnu, superposé), avec un conseil concret (« allumez la lumière », « redressez l'objet »), afin de refaire une capture fiable. | Must | ✅ Fait |
 | US17 | Je veux une **salle de classe 3D de démonstration** dont le contenu exact est connu, afin de tester la détection et mesurer le taux de détection sans image interne. | Should | ✅ Fait |
-| US18 | Je veux **agréger plusieurs prises de vue** pour une grande salle. | Could | ⏳ Backlog (risque de doublons) |
-| US19 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
+| US18 | Je veux un **mode Scan vidéo temps réel** (suivi des objets, inventaire en direct, alertes) avec un bouton de capture, afin de cadrer et d'auditer en continu. | Should | ✅ Fait |
+| US19 | Je veux connaître **l'ambiance sonore** de la salle (niveau, catégories de bruit : circulation, voix, alarme…), de façon anonyme. | Could | ✅ Fait |
+| US20 | Je veux fixer une **tolérance d'écart**, afin de ne pas déclencher d'alerte pour un écart non significatif. | Should | ✅ Fait |
+| US21 | En tant que responsable, je veux **archiver les audits** (avec image si autorisé) dans une base, afin d'en garder la trace. | Must | ✅ Fait |
+| US22 | Je veux un **registre des anomalies** (gravité, statut, commentaire, export CSV), afin de piloter les actions correctives jusqu'à leur résolution. | Must | ✅ Fait |
+| US23 | Je veux **agréger plusieurs prises de vue** pour une grande salle, en **validant chaque objet une seule fois** (Ajouter → À valider → Inventaire, avec fiche par objet), afin d'éviter le double comptage. | Should | ✅ Fait |
+| US24 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
 
 **Planning sur 4 heures :**
 
@@ -154,6 +173,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | **K3 · Nombre d'écarts** | Nombre de règles vérifiables où détecté ≠ attendu | Suivi, pas de cible | Tableau de bord |
 | K4 · Temps d'inférence | Durée d'un appel au modèle | < 1 s sur un ordinateur portable | Tableau de bord |
 | K5 · Couverture vérifiable | Règles vérifiables ÷ règles configurées | 3 sur 4 pour la configuration d'exemple | Tableau de bord |
+| K7 · Taux de résolution des anomalies | (Résolues + faux positifs) ÷ anomalies | ≥ 80 % sous 48 h | Registre des anomalies |
 | K6 · Confidentialité | Nombre d'images stockées ou transmises, nombre de personnes analysées | 0 | Revue de code et onglet Réseau du navigateur |
 
 > **Lecture :** K1 mesure la *qualité*, K2 l'*efficacité*, K3 le *résultat métier*. K1 n'a de sens que sur des images dont on connaît le comptage réel. Sur une salle réelle, un écart peut venir du modèle autant que de la salle.
@@ -178,6 +198,11 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T10 | Fichier non image | Message « Format non pris en charge » | ✅ Géré |
 | T11 | Image très sombre (luminosité moyenne < 22 %) | Qualité « Insuffisante » + conseil « Allumez la lumière » | ✅ Conforme |
 | T12 | Objet coupé par le bord, détection faible, doublon | Anomalies « coupé », « mal reconnu → redressez », « chevauchement » | ✅ Conforme |
+| T14 | API locale (Wrangler, D1 + R2) : enregistrer, lister, image, statut, suppression | Réponses 201/200, image servie, statut invalide refusé (400), suppression complète | ✅ Conforme |
+| T15 | Mode Scan : suivi, identifiants, alertes, capture | IDs stables (CHR-01…), alerte « objet mal reconnu », capture → audit complet | ✅ Conforme (caméra virtuelle) |
+| T16 | Registre : changement de statut et commentaire | KPI recalculés (taux de résolution), persistance en base | ✅ Conforme |
+| T17 | Tolérance d'écart | Écart dans la tolérance → « Conforme (tolérance) » | ✅ Conforme |
+| T18 | Inventaire cumulé : ajouter 4 objets, en décocher 1, valider, retirer 1 | 3 objets en inventaire puis 2 ; audit lié recalculé automatiquement (3 → 2) | ✅ Conforme |
 | T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |
 
 ### 5.2 Trois situations réelles (webcam ou photo) et salle 3D
@@ -200,7 +225,8 @@ La salle 3D (`vitrine.html`) fournit un **jeu de test synthétique annoté** : l
 
 | # | Risque | Probabilité | Impact | Réponse |
 |---|---|---|---|---|
-| R1 | Sous-détection (objets masqués, empilés, hors cadre) prise pour une absence | Élevée | Élevé | Statut « À vérifier », mention explicite, recommandations de contrôle manuel |
+| R1 | Sous-détection (objets masqués, empilés, hors cadre) prise pour une absence | Élevée | Élevé | Statut « À vérifier », mention explicite, recommandations de contrôle manuel, inventaire cumulé multi-angles |
+| R1b | Double comptage d'un même objet entre deux images | Élevée | Moyen | Validation humaine objet par objet (étape « À valider »), suivi d'identifiants stables |
 | R2 | Personne présente dans le champ | Moyenne | Élevé (RGPD) | Suppression de `person` dès la sortie du modèle, consigne de cadrage, aucun stockage |
 | R3 | Catégories non couvertes par COCO (tableau, fenêtres) | Certaine | Moyen | Déclarées « non vérifiables », jamais simulées |
 | R4 | Mauvaise classe (bureau → « dining table », écran → « tv ») | Élevée | Moyen | Correspondance documentée, statut « Partiel » |
@@ -209,6 +235,8 @@ La salle 3D (`vitrine.html`) fournit un **jeu de test synthétique annoté** : l
 | R7 | Seuil mal réglé (faux positifs ou oublis) | Moyenne | Moyen | Seuil visible et réglable, détections sous le seuil listées à part |
 | R8 | Délai de 4 heures | Élevée | Élevé | Approche minimale (sans build ni backend), périmètre MVP strict, déploiement continu |
 | R9 | Images non autorisées | Faible | Élevé | Charte affichée, aucune image publiée dans le dépôt, salle 3D de synthèse pour les tests |
+| R11 | Image archivée contenant une personne | Faible | Élevé | Case de confirmation obligatoire, archivage facultatif, suppression en un clic, accès par code |
+| R12 | Configuration Cloudflare (liaisons D1/R2) incorrecte | Moyenne | Moyen | Route `/api/health`, repli automatique en mode local, guide pas à pas dans le README |
 | R10 | Prise de vue de mauvaise qualité (obscurité, contre-jour, flou) | Élevée | Moyen | Diagnostic automatique en direct et après capture, avec conseil d'action |
 
 ### 6.2 Limites du modèle

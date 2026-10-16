@@ -67,7 +67,7 @@
     raw: [],              // dernières prédictions (personnes déjà retirées)
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
     imgW: 0, imgH: 0, measure: null, quality: null,
-    threshold: 0.5,
+    threshold: 0.5, tolerance: 0,
     auditStart: null, lastDurationS: null,
     config: {}, roomName: 'Salle de démonstration',
     history: [],
@@ -105,6 +105,7 @@
     $$('.nav-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === view));
     if (view === 'rapport') renderReport();
     if (view === 'dashboard') renderDashboard();
+    document.dispatchEvent(new CustomEvent('esc:view', { detail: view }));
     if (location.hash !== `#${view}`) history.replaceState(null, '', `#${view}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -247,6 +248,7 @@
   // 7. Analyse (capture webcam ou image importée)
   // ------------------------------------------------------------------
   async function analyzeFromCanvas(sourceLabel) {
+    state.collectionMode = false;
     state.imgW = els.frame.width; state.imgH = els.frame.height;
     state.measure = measureImage(els.frame, state.imgW, state.imgH);
     const t0 = performance.now();
@@ -266,6 +268,7 @@
     redrawFrame();
     renderResults();
     pushHistory();
+    document.dispatchEvent(new CustomEvent('esc:analyzed'));
   }
 
   // ------------------------------------------------------------------
@@ -305,8 +308,10 @@
   };
 
   /** Liste d'anomalies : { level: 'high'|'mid'|'info', title, advice }. */
-  function assessQuality(m, kept, raw, w, h) {
+  function assessQuality(m, keptAll, raw, w, h) {
     const out = [];
+    const kept = keptAll.filter((p) => p.bbox);
+    if (state.collectionMode) out.push({ level: 'info', code: 'coll', title: 'Audit sur collection cumulée', advice: 'Comptage validé objet par objet pendant le scan : chaque objet n\'est compté qu\'une fois.' });
     if (m.mean < 55) out.push({ level: 'high', code: 'dark', title: 'Image trop sombre', advice: 'Allumez la lumière ou ouvrez les volets, puis recommencez la capture.' });
     else if (m.mean < 80) out.push({ level: 'mid', code: 'dim', title: 'Éclairage faible', advice: 'Ajoutez de la lumière : la détection sera plus fiable.' });
     if (m.mean > 215) out.push({ level: 'mid', code: 'bright', title: 'Image surexposée', advice: 'Évitez la lumière directe sur l\'objectif ou baissez l\'éclairage.' });
@@ -325,7 +330,7 @@
       if (kept[i].cls === kept[j].cls && iou(kept[i].bbox, kept[j].bbox) > 0.5) overlaps++;
     }
     if (overlaps) out.push({ level: 'mid', code: 'overlap', title: `${overlaps} chevauchement(s) suspect(s)`, advice: 'Objets empilés ou double détection : vérifiez visuellement, ou changez d\'angle.' });
-    if (!kept.length) out.push({ level: 'high', code: 'none', title: 'Aucun objet reconnu', advice: 'Vérifiez le cadrage (mobilier bien visible), la lumière, ou abaissez le seuil.' });
+    if (!keptAll.length) out.push({ level: 'high', code: 'none', title: 'Aucun objet reconnu', advice: 'Vérifiez le cadrage (mobilier bien visible), la lumière, ou abaissez le seuil.' });
     return out;
   }
   const qualityGrade = (list) => list.some((a) => a.level === 'high') ? 'Insuffisante'
@@ -365,6 +370,32 @@
     const c = els.frame, ctx = c.getContext('2d');
     if (frameBitmap) { ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(frameBitmap, 0, 0, c.width, c.height); }
     drawBoxes(c, filtered(), true, false);
+  }
+
+  /** Audit d'une collection cumulée (mode Scan) : chaque objet a été validé une seule fois par l'utilisateur. */
+  async function analyzeCollection(items) {
+    const v = els.video;
+    stopLive();
+    if (v.videoWidth) {
+      els.frame.width = v.videoWidth; els.frame.height = v.videoHeight;
+      els.frame.getContext('2d').drawImage(v, 0, 0);
+      frameBitmap = await createImageBitmap(els.frame);
+      freeze();
+      setBadge('Collection auditée · image de contexte');
+    }
+    state.collectionMode = true;
+    state.imgW = els.frame.width; state.imgH = els.frame.height;
+    state.measure = state.imgW ? measureImage(els.frame, state.imgW, state.imgH) : null;
+    state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
+    state.analyzed = true;
+    state.source = `Scan cumulé (${items.length} objet(s) collecté(s))`;
+    state.analyzedAt = new Date();
+    state.lastDurationS = state.auditStart ? (performance.now() - state.auditStart) / 1000 : null;
+    state.auditStart = state.stream ? performance.now() : null;
+    redrawFrame();
+    renderResults();
+    pushHistory();
+    document.dispatchEvent(new CustomEvent('esc:analyzed'));
   }
 
   async function capture() {
@@ -425,6 +456,8 @@
     els.btnStop.disabled = !state.stream;
     els.btnCapture.disabled = !state.stream || !ready;
     els.btnLive.disabled = !state.stream || !ready;
+    const scan = document.getElementById('btnScan');
+    if (scan) scan.disabled = !ready;
   }
 
   // ------------------------------------------------------------------
@@ -437,6 +470,7 @@
     ctx.lineWidth = 2.5 * s;
     ctx.font = `600 ${13 * s}px Montserrat, sans-serif`;
     preds.forEach((p) => {
+      if (!p.bbox) return; // objets d'une collection cumulée : pas de cadre sur l'image de contexte
       const [x, y, w, h] = p.bbox;
       ctx.strokeStyle = '#B794E0';
       ctx.strokeRect(x, y, w, h);
@@ -479,7 +513,9 @@
       else if (!state.analyzed) status = { code: 'pending', label: 'En attente d\'analyse', cls: 'status-pending', sym: '…' };
       else {
         gap = detected - expected;
+        const allowed = Math.floor((expected * (state.tolerance || 0)) / 100);
         if (gap === 0) status = { code: 'ok', label: 'Conforme', cls: 'status-ok', sym: '✓' };
+        else if (Math.abs(gap) <= allowed) status = { code: 'ok', label: `Conforme (tolérance ±${state.tolerance} %)`, cls: 'status-ok', sym: '≈' };
         else if (gap < 0) status = { code: 'under', label: 'À vérifier — sous-détection', cls: 'status-warn', sym: '△' };
         else status = { code: 'over', label: 'À vérifier — surplus', cls: 'status-warn', sym: '△' };
       }
@@ -531,6 +567,11 @@
     store.set('esc.config', state.config);
   });
   $('#roomName').addEventListener('input', (e) => { state.roomName = e.target.value; store.set('esc.room', state.roomName); });
+  $('#tolerance').addEventListener('input', (e) => {
+    state.tolerance = Math.min(50, Math.max(0, Math.floor(Number(e.target.value) || 0)));
+    store.set('esc.tol', state.tolerance);
+    if (state.analyzed) renderResults();
+  });
   $('#btnResetConfig').addEventListener('click', () => {
     state.config = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.example]));
     store.set('esc.config', state.config); renderConfig();
@@ -667,6 +708,7 @@
       <h2>5. Qualité de la prise de vue et anomalies</h2>
       ${!state.quality ? '<p class="muted">—</p>' : `<p>Qualité estimée : <b>${esc(state.quality.grade)}</b>${state.measure ? ` · luminosité ${Math.round(state.measure.mean / 2.55)} % · netteté ${Math.round(state.measure.sharp)}` : ''}.</p>
         ${state.quality.list.length ? `<ul>${state.quality.list.map((q) => `<li><b>${esc(q.title)}</b> — ${esc(q.advice)}</li>`).join('')}</ul>` : '<p>Aucune anomalie de prise de vue détectée.</p>'}`}
+      ${state.ambient ? `<p><b>Ambiance sonore</b> (catégories anonymes, aucun enregistrement) : niveau ${esc(state.ambient.label)} (${state.ambient.level}/100)${state.ambient.top.length ? ` · ${state.ambient.top.map((s) => `${esc(s.name)} ${Math.round(s.score * 100)} %`).join(', ')}` : ''}.</p>` : ''}
 
       <h2>6. Catégories non prises en charge</h2>
       <ul>${CATEGORIES.filter((c) => !c.coco.length).map((c) => `<li><b>${esc(c.label)}</b> — ${esc(c.note)}</li>`).join('')}
@@ -786,9 +828,11 @@
     state.config = saved || Object.fromEntries(CATEGORIES.map((c) => [c.key, c.example]));
     state.roomName = store.get('esc.room', state.roomName);
     state.history = store.get('esc.history', []);
+    state.tolerance = store.get('esc.tol', 0);
+    $('#tolerance').value = state.tolerance;
     renderScope(); renderConfig(); renderResults(); renderDashboard();
     const initial = location.hash.slice(1);
-    if (['accueil', 'audit', 'config', 'dashboard', 'rapport'].includes(initial)) show(initial);
+    if (['accueil', 'audit', 'config', 'dashboard', 'rapport', 'inventaire', 'anomalies', 'archives'].includes(initial)) setTimeout(() => show(initial), 0);
     updateButtons();
     loadModel();
     if (!store.get('esc.onboarded', false) && params.get('tuto') !== '0') openOb();
@@ -797,5 +841,18 @@
   init();
 
   // Exposé pour les tests automatisés uniquement (lecture seule de l'état calculé)
-  window.__ESC__ = { computeAudit, state };
+  window.__ESC__ = {
+    computeAudit, state, show, esc, fr, pct, filtered, detect, drawBoxes, measureImage, assessQuality,
+    getFrameBitmap: () => frameBitmap, startCamera, stopCamera, els,
+    analyzeFromVideo: async () => capture(), analyzeCollection,
+    refreshCollection(items) { // recalcul dynamique de l'audit quand l'inventaire change
+      state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
+      state.source = `Scan cumulé (${items.length} objet(s) collecté(s))`;
+      state.analyzedAt = new Date();
+      renderResults(); renderDashboard();
+      if (document.getElementById('view-rapport').classList.contains('is-active')) renderReport();
+      document.dispatchEvent(new CustomEvent('esc:analyzed'));
+    },
+  };
+  document.dispatchEvent(new CustomEvent('esc:ready'));
 })();

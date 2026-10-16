@@ -14,6 +14,8 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
   <script defer src="app.js"></script>
+  <script defer src="registry.js"></script>
+  <script type="module" src="scan.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -33,6 +35,9 @@
       <button class="nav-btn" data-view="config">Configuration</button>
       <button class="nav-btn" data-view="dashboard">Tableau de bord</button>
       <button class="nav-btn" data-view="rapport">Rapport</button>
+      <button class="nav-btn" data-view="inventaire">Inventaire <span class="nav-count" id="navInvCount" hidden></span></button>
+      <button class="nav-btn" data-view="anomalies">Anomalies <span class="nav-count" id="navAnoCount" hidden></span></button>
+      <button class="nav-btn" data-view="archives">Archives</button>
       <a class="nav-btn nav-link" href="vitrine.html">Salle 3D ↗</a>
     </nav>
     <button id="btnTuto" class="tuto-btn" type="button" aria-label="Revoir le tutoriel">? Tuto</button>
@@ -119,8 +124,40 @@
               <p>Démarrez la caméra ou importez une image de test.</p>
             </div>
             <div class="stage-badge" id="stageBadge" hidden></div>
+            <!-- HUD du mode Scan (vidéo temps réel) -->
+            <canvas id="hud" aria-hidden="true"></canvas>
+            <div class="hud" id="hudUi" hidden>
+              <div class="hud-tl"><span class="hud-live">● SCAN EN DIRECT</span><span>ANALYSE LOCALE · AUCUN ENREGISTREMENT</span><span id="hudFps">— IPS</span></div>
+              <div class="hud-tr"><button class="hud-btn hud-btn-accent" id="hudAddAll" type="button">＋ Ajouter tous les visibles</button><button class="hud-btn" id="hudFull" type="button">⛶ Plein écran</button><button class="hud-btn" id="hudExit" type="button">✕ Quitter</button></div>
+              <div class="hud-adds" id="hudAdds"></div>
+              <div class="hud-left" id="hudCounts"></div>
+              <div class="hud-right" id="hudFeed" aria-live="polite"></div>
+              <div class="hud-bottom">
+                <div class="hud-audio">
+                  <div class="hud-audio-head"><span>AMBIANCE SONORE</span><button class="hud-btn hud-btn-sm" id="hudMic" type="button">🎙 Activer le micro</button></div>
+                  <canvas id="hudSpectrum" width="300" height="46"></canvas>
+                  <div class="hud-level"><span id="hudLevelBar"></span></div>
+                  <div class="hud-sounds" id="hudSounds">Micro inactif</div>
+                </div>
+                <button class="hud-capture" id="hudCapture" type="button">📸 Capturer &amp; auditer</button>
+                <div class="hud-persons">PERSONNES : NON ANALYSÉES</div>
+              </div>
+            </div>
           </div>
           <div id="cameraMsg" class="alert" role="alert" hidden></div>
+
+          <article class="card collection" id="collectionCard" hidden>
+            <div class="coll-head">
+              <h3 class="card-title">À valider <span class="muted small" id="collTotal"></span></h3>
+              <div class="btn-row">
+                <button id="collToggle" class="btn btn-ghost btn-sm" disabled>Tout désélectionner</button>
+                <button id="collValidate" class="btn btn-primary btn-sm" disabled>✓ Valider la sélection</button>
+              </div>
+            </div>
+            <p class="muted small">En mode Scan, cliquez sur « ＋ Ajouter » sur chaque objet. Vérifiez ici les vignettes, décochez ce qui est faux ou en double, puis validez : seuls les objets cochés entrent dans l'inventaire, et chacun n'est compté qu'une fois.</p>
+            <div class="coll-grid" id="collGrid"></div>
+            <div class="coll-sum" id="collSum"></div>
+          </article>
 
           <div class="controls">
             <button id="btnStart" class="btn btn-primary">Démarrer la caméra</button>
@@ -130,7 +167,8 @@
               Importer une image
               <input id="fileInput" type="file" accept="image/*">
             </label>
-            <button id="btnLive" class="btn btn-ghost" disabled aria-pressed="false">Détection en direct : off</button>
+            <button id="btnScan" class="btn btn-primary" disabled>◎ Mode Scan vidéo (temps réel)</button>
+            <button id="btnLive" class="btn btn-ghost" disabled aria-pressed="false" hidden>Détection en direct : off</button>
             <button id="btnBack" class="btn btn-ghost" hidden>Revenir au direct</button>
           </div>
 
@@ -168,7 +206,14 @@
             <h3 class="card-title">Détections <span class="muted small" id="detMeta"></span></h3>
             <ol class="det-list" id="detList"></ol>
           </article>
-          <button class="btn btn-primary btn-block" data-view="dashboard">Voir le tableau de bord →</button>
+          <article class="card save-card">
+            <h3 class="card-title">Enregistrer l'audit</h3>
+            <p class="muted small" id="dbMode">Connexion à la base…</p>
+            <label class="check"><input type="checkbox" id="saveImage" checked> Joindre l'image (aucune personne n'est visible)</label>
+            <button id="btnSave" class="btn btn-primary btn-block" disabled>Enregistrer dans la base</button>
+            <p class="small" id="saveMsg" role="status" aria-live="polite"></p>
+          </article>
+          <button class="btn btn-ghost btn-block" data-view="dashboard">Voir le tableau de bord →</button>
         </aside>
       </div>
     </section>
@@ -186,6 +231,11 @@
         <div class="param inline">
           <label for="roomName">Salle auditée</label>
           <input id="roomName" type="text" maxlength="60" placeholder="ex. Salle de test — Démo" value="Salle de démonstration">
+        </div>
+        <div class="param inline">
+          <label for="tolerance">Tolérance d'écart (%) <span class="muted small">— seuil de conformité</span></label>
+          <input id="tolerance" type="number" min="0" max="50" step="5" value="0">
+          <small class="muted">Ex. 10 % : 19 chaises détectées sur 20 attendues = « Conforme (tolérance) ». 0 = comptage exact exigé.</small>
         </div>
         <p class="muted">Valeurs fictives de démonstration. Laissez un champ vide pour ne pas contrôler la catégorie. Une catégorie non prise en charge par le modèle reste <em>non vérifiable</em> : elle sera signalée pour un contrôle manuel.</p>
         <div class="table-wrap">
@@ -256,6 +306,68 @@
         </div>
       </div>
       <article id="report" class="report card"></article>
+    </section>
+
+    <!-- ============ INVENTAIRE ============ -->
+    <section id="view-inventaire" class="view" aria-labelledby="h-inv">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Scan cumulé · objets validés</p>
+          <h2 id="h-inv">Inventaire des objets</h2>
+        </div>
+        <div class="btn-row">
+          <button id="invAudit" class="btn btn-primary btn-sm" disabled>Auditer l'inventaire</button>
+          <button id="invClear" class="btn btn-ghost btn-sm" disabled>Vider</button>
+        </div>
+      </div>
+      <p class="sync-note" id="invSync"></p>
+      <div class="kpis" id="invKpis"></div>
+      <div class="fiche-grid" id="invGrid"></div>
+      <p class="note">Une fiche par objet validé : vignette, classe, confiance et seuil appliqué, durée de suivi, position, luminosité locale. Les vignettes restent dans le navigateur (aucune personne n'est jamais détectée ni recadrée).</p>
+    </section>
+
+    <!-- ============ ANOMALIES ============ -->
+    <section id="view-anomalies" class="view" aria-labelledby="h-ano">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Étape 4 · Pilotage</p>
+          <h2 id="h-ano">Registre des anomalies</h2>
+        </div>
+        <div class="btn-row">
+          <select id="anoFilter" aria-label="Filtrer par statut">
+            <option value="">Tous les statuts</option><option>Ouverte</option><option>En cours</option><option>Résolue</option><option>Faux positif</option>
+          </select>
+          <button id="anoRefresh" class="btn btn-ghost btn-sm">Actualiser</button>
+          <button id="anoCsv" class="btn btn-ghost btn-sm">Exporter (CSV)</button>
+        </div>
+      </div>
+      <div class="kpis" id="anoKpis"></div>
+      <div class="card">
+        <p class="muted small" id="anoMode"></p>
+        <div class="table-wrap">
+          <table class="table ano-table" id="anoTable">
+            <thead><tr><th>Date</th><th>Salle</th><th>Type</th><th>Gravité</th><th>Anomalie et action corrective</th><th>Statut</th><th>Commentaire</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note">Chaque audit enregistré génère ses anomalies (écarts, catégories hors modèle, qualité de prise de vue). Faites-les vivre jusqu'à leur résolution : Ouverte → En cours → Résolue (ou Faux positif si le modèle s'est trompé).</p>
+      </div>
+    </section>
+
+    <!-- ============ ARCHIVES ============ -->
+    <section id="view-archives" class="view" aria-labelledby="h-arch">
+      <div class="view-head">
+        <div>
+          <p class="eyebrow">Base de données</p>
+          <h2 id="h-arch">Archives des audits</h2>
+        </div>
+        <div class="btn-row">
+          <input id="accessCode" type="password" placeholder="Code d'accès (si défini)" aria-label="Code d'accès" autocomplete="off">
+          <button id="archRefresh" class="btn btn-ghost btn-sm">Actualiser</button>
+        </div>
+      </div>
+      <p class="muted small" id="archMode"></p>
+      <div class="arch-grid" id="archGrid"></div>
     </section>
   </main>
 
