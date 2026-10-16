@@ -11,6 +11,8 @@
 
 EPITA Smart Classroom aide un responsable non technique à vérifier la configuration d'une salle :
 
+0. **Tutoriel de prise en main** — onboarding en 6 étapes au premier lancement (règles de cadrage, lecture des statuts), relançable via le bouton « ? Tuto ».
+
 1. **Prise de vue** — webcam (bouton démarrer / arrêter) ou import d'une image de test autorisée.
 2. **Détection** — un modèle pré-entraîné (COCO-SSD) repère les équipements, affiche un cadre, la catégorie et le score de confiance. Seuil de confiance paramétrable en direct.
 3. **Audit** — comparaison à une configuration théorique modifiable (attendu / détecté / écart / statut).
@@ -47,6 +49,7 @@ Paramètres de test intégrés :
 |---|---|
 | `?test=model-fail` | simule l'échec de chargement du modèle |
 | `?test=camera-denied` | simule un refus d'accès à la caméra |
+| `?tuto=0` | n'affiche pas le tutoriel au lancement |
 
 ## 4. Déploiement Cloudflare Pages
 

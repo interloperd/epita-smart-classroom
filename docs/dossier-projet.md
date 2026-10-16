@@ -45,7 +45,7 @@ Arbre des enjeux, découpé en trois branches qui ne se recoupent pas :
 | **Équipe IT / support** | Contrôler écrans et ordinateurs portables | Détection, rapport |
 
 ### 1.4 Périmètre du MVP
-- **Inclus :** accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
+- **Inclus :** tutoriel de prise en main (onboarding) · accueil · caméra démarrer/arrêter · import d'image · détection avec cadres, catégories et scores · seuil réglable · configuration théorique modifiable · comparaison attendu/détecté/écart/statut · tableau de bord de 8 indicateurs · rapport (impression PDF et export .md) · gestion des erreurs caméra et modèle · historique de session (chiffres seulement).
 - **Exclus (assumé) :**
   - toute analyse, identification ou comptage des personnes ;
   - l'enregistrement d'images ou de vidéos ;
@@ -124,8 +124,9 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | US12 | Je veux une **détection en direct** (aperçu), afin de cadrer avant de capturer. | Should | ✅ Fait |
 | US13 | Je veux **choisir la variante du modèle** (rapide ou précise). | Could | ✅ Fait |
 | US14 | Je veux un **historique des audits** de la session, afin de mesurer le temps moyen. | Should | ✅ Fait |
-| US15 | Je veux **agréger plusieurs prises de vue** pour une grande salle. | Could | ⏳ Backlog (risque de doublons) |
-| US16 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
+| US15 | En tant que nouvel utilisateur, je veux un **tutoriel de prise en main** (onboarding en 6 étapes) au premier lancement, afin d'utiliser l'outil correctement et de respecter les règles de cadrage. | Should | ✅ Fait |
+| US16 | Je veux **agréger plusieurs prises de vue** pour une grande salle. | Could | ⏳ Backlog (risque de doublons) |
+| US17 | Je veux **détecter tableau et fenêtres** grâce à un modèle spécialisé. | Could | ⏳ Backlog (fine-tuning hors périmètre) |
 
 **Planning sur 4 heures :**
 

@@ -612,7 +612,70 @@
   });
 
   // ------------------------------------------------------------------
-  // 12. Initialisation
+  // 12. Onboarding (tutoriel avant usage)
+  // ------------------------------------------------------------------
+  const ART = {
+    hello: '<svg viewBox="0 0 210 130"><rect x="30" y="18" width="150" height="94" rx="10" fill="#fff" stroke="currentColor" stroke-width="1.5"/><rect x="48" y="58" width="34" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/><rect x="96" y="48" width="66" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="96" y="38" width="44" height="12" rx="2" fill="currentColor"/><circle cx="160" cy="30" r="3" fill="currentColor"/><circle cx="176" cy="44" r="2" fill="currentColor"/><path d="M160 30 L176 44" stroke="currentColor" stroke-width=".8"/></svg>',
+    privacy: '<svg viewBox="0 0 210 130"><path d="M105 14 L150 30 V64 C150 92 130 108 105 118 C80 108 60 92 60 64 V30 Z" fill="#fff" stroke="currentColor" stroke-width="1.8"/><circle cx="105" cy="56" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M84 92 C88 78 122 78 126 92" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M74 104 L136 34" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+    config: '<svg viewBox="0 0 210 130"><rect x="40" y="18" width="130" height="94" rx="10" fill="#fff" stroke="currentColor" stroke-width="1.5"/><g font-family="Montserrat,sans-serif" font-size="10" fill="currentColor"><text x="54" y="44">Tables</text><text x="54" y="68">Chaises</text><text x="54" y="92">Portables</text></g><g fill="none" stroke="currentColor" stroke-width="1.3"><rect x="120" y="33" width="34" height="16" rx="4"/><rect x="120" y="57" width="34" height="16" rx="4"/><rect x="120" y="81" width="34" height="16" rx="4"/></g><g font-family="Montserrat,sans-serif" font-size="10" font-weight="600" fill="currentColor" text-anchor="end"><text x="149" y="45">10</text><text x="149" y="69">20</text><text x="149" y="93">5</text></g></svg>',
+    capture: '<svg viewBox="0 0 210 130"><rect x="42" y="30" width="126" height="80" rx="10" fill="#fff" stroke="currentColor" stroke-width="1.6"/><path d="M80 30 l8-12 h34 l8 12" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="105" cy="70" r="24" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="105" cy="70" r="12" fill="currentColor" opacity=".25"/><rect x="58" y="92" width="94" height="5" rx="2.5" fill="currentColor" opacity=".2"/><circle cx="118" cy="94.5" r="5" fill="currentColor"/></svg>',
+    read: '<svg viewBox="0 0 210 130"><rect x="30" y="20" width="150" height="90" rx="10" fill="#fff" stroke="currentColor" stroke-width="1.5"/><g font-family="Montserrat,sans-serif" font-size="9" font-weight="600"><rect x="46" y="34" width="72" height="18" rx="9" fill="currentColor"/><text x="54" y="46" fill="#fff">✓ Conforme</text><rect x="46" y="58" width="80" height="18" rx="9" fill="#fff" stroke="currentColor" stroke-width="1.4"/><text x="54" y="70" fill="currentColor">△ À vérifier</text><rect x="46" y="82" width="96" height="18" rx="9" fill="none" stroke="#9A93A3" stroke-dasharray="3 2"/><text x="54" y="94" fill="#7C7486">∅ Non vérifiable</text></g></svg>',
+    report: '<svg viewBox="0 0 210 130"><rect x="66" y="12" width="78" height="106" rx="6" fill="#fff" stroke="currentColor" stroke-width="1.5"/><rect x="78" y="26" width="40" height="5" rx="2" fill="currentColor"/><g fill="currentColor" opacity=".25"><rect x="78" y="40" width="54" height="4" rx="2"/><rect x="78" y="50" width="48" height="4" rx="2"/><rect x="78" y="60" width="54" height="4" rx="2"/><rect x="78" y="70" width="36" height="4" rx="2"/></g><rect x="78" y="86" width="54" height="18" rx="9" fill="currentColor"/><text x="105" y="98" font-family="Montserrat,sans-serif" font-size="8.5" font-weight="600" fill="#fff" text-anchor="middle">PDF</text></svg>',
+  };
+  const STEPS = [
+    { art: 'hello', title: 'Bienvenue dans EPITA Smart Classroom',
+      html: '<p>En une prise de vue, l\'application <b>détecte le mobilier</b> d\'une salle, le <b>compare</b> à la configuration attendue et produit un <b>rapport d\'audit</b>.</p><p>Tout se passe dans votre navigateur. Comptez moins d\'une minute par audit.</p>' },
+    { art: 'privacy', title: 'Avant tout : cadrez le mobilier',
+      html: '<ul><li><b>Orientez la caméra vers les équipements</b>, pas vers les personnes.</li><li>Si quelqu\'un entre dans le champ, il est <b>automatiquement ignoré</b> : jamais affiché, compté ni conservé.</li><li><b>Aucune image n\'est enregistrée</b> ni envoyée sur un serveur.</li><li>N\'importez que des photos que vous avez le droit d\'utiliser.</li></ul>' },
+    { art: 'config', title: '1. Indiquez ce qui est attendu',
+      html: '<p>Dans <b>Configuration</b>, renseignez le nombre de tables, chaises, ordinateurs portables… prévus dans la salle. Laissez un champ vide pour ne pas contrôler une catégorie.</p><p class="muted small">Un exemple de démonstration est déjà prérempli (10 tables, 20 chaises, 1 tableau, 5 portables).</p>' },
+    { art: 'capture', title: '2. Capturez la salle',
+      html: '<ul><li><b>Démarrer la caméra</b>, puis <b>Capturer &amp; analyser</b>, ou <b>Importer une image</b>.</li><li>Prenez du recul, avec une bonne lumière et sans contre-jour.</li><li>Ajustez le <b>seuil de confiance</b> : plus bas, on voit plus d\'objets mais avec plus d\'erreurs.</li></ul>' },
+    { art: 'read', title: '3. Lisez les résultats avec prudence',
+      html: '<ul><li><span class="tag status-ok">✓ Conforme</span> la quantité détectée correspond à l\'attendu.</li><li><span class="tag status-warn">△ À vérifier</span> il y a un écart. <b>Un objet non détecté n\'est pas forcément absent</b> : il peut être masqué ou hors cadre.</li><li><span class="tag status-na">∅ Non vérifiable</span> le modèle ne sait pas reconnaître cette catégorie (tableau, fenêtres) : contrôle manuel.</li></ul>' },
+    { art: 'report', title: '4. Partagez le rapport',
+      html: '<p>Le <b>Tableau de bord</b> donne le verdict en un coup d\'œil. Le <b>Rapport</b> détaille les écarts, les limites et les contrôles à faire ; exportez-le en <b>PDF</b> ou en Markdown.</p><p>Vous pouvez revoir ce tutoriel à tout moment avec le bouton <b>? Tuto</b>.</p>' },
+  ];
+  const ob = { el: $('#onboarding'), i: 0, lastFocus: null };
+  function renderOb() {
+    const s = STEPS[ob.i];
+    $('#obArt').innerHTML = ART[s.art];
+    $('#obStep').textContent = `Étape ${ob.i + 1} sur ${STEPS.length}`;
+    $('#obTitle').textContent = s.title;
+    $('#obText').innerHTML = s.html;
+    $('#obDots').innerHTML = STEPS.map((_, k) => `<span class="${k === ob.i ? 'on' : ''}"></span>`).join('');
+    $('#obPrev').disabled = ob.i === 0;
+    $('#obNext').textContent = ob.i === STEPS.length - 1 ? 'Commencer l\'audit →' : 'Suivant →';
+  }
+  function openOb() {
+    ob.i = 0; ob.lastFocus = document.activeElement;
+    ob.el.hidden = false; renderOb(); $('#obNext').focus();
+  }
+  function closeOb(goAudit = false) {
+    ob.el.hidden = true; store.set('esc.onboarded', true);
+    if (goAudit) show('audit');
+    else if (ob.lastFocus && ob.lastFocus.focus) ob.lastFocus.focus();
+  }
+  $('#obNext').addEventListener('click', () => { if (ob.i < STEPS.length - 1) { ob.i++; renderOb(); } else closeOb(true); });
+  $('#obPrev').addEventListener('click', () => { if (ob.i > 0) { ob.i--; renderOb(); } });
+  ob.el.addEventListener('click', (e) => { if (e.target.closest('[data-ob-close]')) closeOb(); });
+  document.addEventListener('keydown', (e) => {
+    if (ob.el.hidden) return;
+    if (e.key === 'Escape') closeOb();
+    if (e.key === 'ArrowRight') $('#obNext').click();
+    if (e.key === 'ArrowLeft') $('#obPrev').click();
+    if (e.key === 'Tab') { // garde le focus dans la fenêtre
+      const f = $$('#onboarding button:not([disabled])');
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  $('#btnTuto').addEventListener('click', openOb);
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-tuto]')) openOb(); });
+
+  // ------------------------------------------------------------------
+  // 13. Initialisation
   // ------------------------------------------------------------------
   function init() {
     const saved = store.get('esc.config', null);
@@ -624,6 +687,7 @@
     if (['accueil', 'audit', 'config', 'dashboard', 'rapport'].includes(initial)) show(initial);
     updateButtons();
     loadModel();
+    if (!store.get('esc.onboarded', false) && params.get('tuto') !== '0') openOb();
     window.addEventListener('beforeunload', stopCamera);
   }
   init();

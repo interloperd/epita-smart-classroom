@@ -44,7 +44,7 @@ p { margin: 0 0 .8em; }
 .nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
 .nav-btn {
   font: inherit; font-size: .82rem; font-weight: 500; letter-spacing: .02em; color: var(--ink-2);
-  background: none; border: 0; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: none; border: 0; padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
 }
 .nav-btn:hover { color: var(--violet); background: var(--violet-50); }
 .nav-btn.is-active { color: #fff; background: var(--violet); }
@@ -198,6 +198,28 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 /* ---------- Footer ---------- */
 .footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 24px 32px; border-top: 1px solid var(--line); font-size: .74rem; color: var(--muted); }
 
+/* ---------- Onboarding ---------- */
+.tuto-btn { font: inherit; font-size: .75rem; font-weight: 600; color: var(--violet); background: var(--violet-50); border: 1px solid var(--violet-200); border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.tuto-btn:hover { background: var(--violet-100); }
+.ob { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; }
+.ob-backdrop { position: absolute; inset: 0; background: rgba(42, 19, 66, .55); backdrop-filter: blur(4px); animation: fade .25s ease; }
+.ob-dialog { position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #fff; border-radius: 22px; padding: 28px 32px 24px; box-shadow: 0 30px 80px rgba(42, 19, 66, .35); animation: obIn .3s ease; }
+@keyframes obIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+.ob-skip { position: absolute; top: 16px; right: 18px; font: inherit; font-size: .78rem; color: var(--muted); background: none; border: 0; cursor: pointer; padding: 6px; }
+.ob-skip:hover { color: var(--violet); }
+.ob-art { height: 150px; margin: 4px -32px 20px; background: linear-gradient(160deg, var(--violet-50), #fff); display: grid; place-items: center; color: var(--violet); border-bottom: 1px solid var(--line); }
+.ob-art svg { width: 210px; height: 130px; }
+.ob-dialog h2 { font-size: 1.45rem; font-weight: 500; margin-bottom: 10px; }
+.ob-text { font-size: .92rem; color: var(--ink-2); min-height: 96px; }
+.ob-text ul { margin: 6px 0 0; padding-left: 18px; }
+.ob-text li { margin: 3px 0; }
+.ob-text .tag { margin-right: 4px; }
+.ob-dots { display: flex; gap: 6px; justify-content: center; margin: 18px 0 16px; }
+.ob-dots span { width: 7px; height: 7px; border-radius: 999px; background: var(--violet-200); transition: all .2s ease; }
+.ob-dots span.on { width: 22px; background: var(--violet); }
+.ob-actions { display: flex; justify-content: space-between; gap: 10px; }
+.ob-actions .btn:disabled { visibility: hidden; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1000px) {
   .topbar { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
@@ -218,7 +240,7 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 
 /* ---------- Print (rapport PDF) ---------- */
 @media print {
-  .topbar, .footer, .banner, .no-print, .view:not(#view-rapport) { display: none !important; }
+  .topbar, .footer, .banner, .no-print, .ob, .view:not(#view-rapport) { display: none !important; }
   #view-rapport { display: block !important; }
   body { background: #fff; }
   main { padding: 0; }

@@ -34,6 +34,7 @@
       <button class="nav-btn" data-view="dashboard">Tableau de bord</button>
       <button class="nav-btn" data-view="rapport">Rapport</button>
     </nav>
+    <button id="btnTuto" class="tuto-btn" type="button" aria-label="Revoir le tutoriel">? Tuto</button>
     <div id="modelStatus" class="model-status" role="status" aria-live="polite">
       <span class="dot"></span><span class="txt">Chargement du modèle…</span>
     </div>
@@ -66,6 +67,7 @@
         <div class="hero-cta">
           <button class="btn btn-primary" data-view="audit">Commencer l'audit</button>
           <button class="btn btn-ghost" data-view="config">Définir la configuration</button>
+          <button class="btn btn-ghost" type="button" data-tuto>Voir le tutoriel</button>
         </div>
       </div>
 
@@ -256,5 +258,22 @@
     <span>EPITA Smart Classroom · Examen IA for Managers · 16/10/2026</span>
     <span>Modèle : TensorFlow.js 4.22.0 + COCO-SSD 2.2.3 · Inférence locale, aucune image transmise ni stockée</span>
   </footer>
+
+  <!-- ============ ONBOARDING ============ -->
+  <div id="onboarding" class="ob" hidden>
+    <div class="ob-backdrop" data-ob-close></div>
+    <div class="ob-dialog" role="dialog" aria-modal="true" aria-labelledby="obTitle" aria-describedby="obText">
+      <button class="ob-skip" type="button" data-ob-close>Passer</button>
+      <div class="ob-art" id="obArt" aria-hidden="true"></div>
+      <p class="eyebrow" id="obStep">Étape 1 sur 6</p>
+      <h2 id="obTitle"></h2>
+      <div id="obText" class="ob-text"></div>
+      <div class="ob-dots" id="obDots" aria-hidden="true"></div>
+      <div class="ob-actions">
+        <button id="obPrev" class="btn btn-ghost btn-sm" type="button">← Précédent</button>
+        <button id="obNext" class="btn btn-primary btn-sm" type="button">Suivant →</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
