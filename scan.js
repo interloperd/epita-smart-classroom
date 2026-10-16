@@ -6,9 +6,14 @@ const MP_VERSION = '0.10.14';
 const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@${MP_VERSION}`;
 const YAMNET_URL = 'https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite';
 
-const PREFIX = { 'chair': 'CHR', 'dining table': 'TBL', 'laptop': 'LPT', 'tv': 'SCR', 'keyboard': 'KBD', 'mouse': 'MSE', 'book': 'BOK', 'clock': 'CLK', 'potted plant': 'PLT', 'cell phone': 'PHN', 'backpack': 'BAG', 'couch': 'SOF', 'bench': 'BNC' };
-const TYPE = { 'chair': 'CHAISE', 'dining table': 'TABLE / BUREAU', 'laptop': 'ORDINATEUR PORTABLE', 'tv': 'ÉCRAN', 'keyboard': 'CLAVIER', 'mouse': 'SOURIS', 'book': 'LIVRE', 'clock': 'HORLOGE', 'potted plant': 'PLANTE', 'cell phone': 'TÉLÉPHONE', 'backpack': 'SAC À DOS', 'couch': 'CANAPÉ', 'bench': 'BANC' };
-const CONFIG_KEY = { 'chair': ['chairs', 'Chaises'], 'dining table': ['tables', 'Tables'], 'laptop': ['laptops', 'Portables'], 'tv': ['screens', 'Écrans'] };
+const PREFIX = { 'chair': 'CHR', 'dining table': 'TBL', 'laptop': 'LPT', 'tv': 'SCR', 'keyboard': 'KBD', 'mouse': 'MSE', 'book': 'BOK', 'clock': 'CLK', 'potted plant': 'PLT', 'cell phone': 'PHN', 'backpack': 'BAG', 'couch': 'SOF', 'bench': 'BNC', 'desk': 'DSK', 'whiteboard': 'WBD', 'window': 'WIN', 'door': 'DOR' };
+const TYPE = { 'chair': 'CHAISE', 'dining table': 'TABLE / BUREAU', 'laptop': 'ORDINATEUR PORTABLE', 'tv': 'ÉCRAN', 'keyboard': 'CLAVIER', 'mouse': 'SOURIS', 'book': 'LIVRE', 'clock': 'HORLOGE', 'potted plant': 'PLANTE', 'cell phone': 'TÉLÉPHONE', 'backpack': 'SAC À DOS', 'couch': 'CANAPÉ', 'bench': 'BANC', 'desk': 'TABLE / BUREAU', 'whiteboard': 'TABLEAU', 'window': 'FENÊTRE', 'door': 'PORTE' };
+// Catégories d'audit et classes qui les alimentent (COCO-SSD + analyse avancée OWL-ViT)
+const GROUPS = [
+  ['tables', 'Tables', ['dining table', 'desk']], ['chairs', 'Chaises', ['chair']], ['laptops', 'Portables', ['laptop']],
+  ['screens', 'Écrans', ['tv']], ['board', 'Tableau', ['whiteboard']], ['windows', 'Fenêtres', ['window']], ['doors', 'Portes', ['door']],
+];
+const CONFIG_KEY = Object.fromEntries(GROUPS.flatMap(([k, label, classes]) => classes.map((c) => [c, [k, label]])));
 const SOUND_FR = {
   'Speech': 'Voix humaine', 'Conversation': 'Conversation', 'Male speech, man speaking': 'Voix humaine', 'Female speech, woman speaking': 'Voix humaine',
   'Child speech, kid speaking': 'Voix humaine', 'Narration, monologue': 'Voix humaine', 'Laughter': 'Rires', 'Applause': 'Applaudissements',
@@ -192,13 +197,13 @@ const start = () => {
   function renderCounts() {
     const now = performance.now();
     const live = S.tracks.filter((t) => now - t.last < 600);
-    const rows = Object.entries(CONFIG_KEY).map(([cls, [k, label]]) => {
-      const n = C.items.filter((t) => t.cls === cls).length, v = live.filter((t) => t.cls === cls).length, exp = E.state.config[k];
+    const rows = GROUPS.filter(([k, , classes]) => classes.some((c) => !['desk', 'whiteboard', 'window', 'door'].includes(c)) || C.items.some((t) => classes.includes(t.cls))).map(([k, label, classes]) => {
+      const n = C.items.filter((t) => classes.includes(t.cls)).length, v = live.filter((t) => classes.includes(t.cls)).length, exp = E.state.config[k];
       const pctv = exp ? Math.min(100, (n / exp) * 100) : n ? 100 : 0;
       return `<div class="hud-row"><span>${label.toUpperCase()} <i>· vu ${v}</i></span><b>${n}${exp !== null && exp !== undefined ? `<i>/${exp}</i>` : ''}</b><div class="hud-bar"><span style="width:${pctv}%"></span></div></div>`;
     });
     const others = live.filter((t) => !CONFIG_KEY[t.cls]).length;
-    $('#hudCounts').innerHTML = `<div class="hud-title">INVENTAIRE · ${C.items.length} OBJET(S)${C.pending.length ? ` · ${C.pending.length} À VALIDER` : ''}</div>${rows.join('')}<div class="hud-row"><span>AUTRES</span><b>${C.items.filter((t) => !CONFIG_KEY[t.cls]).length}<i> · vu ${others}</i></b></div><div class="hud-row muted"><span>NON VÉRIFIABLES</span><b>TABLEAU · FENÊTRES · PORTES</b></div>`;
+    $('#hudCounts').innerHTML = `<div class="hud-title">INVENTAIRE · ${C.items.length} OBJET(S)${C.pending.length ? ` · ${C.pending.length} À VALIDER` : ''}</div>${rows.join('')}<div class="hud-row"><span>AUTRES</span><b>${C.items.filter((t) => !CONFIG_KEY[t.cls]).length}<i> · vu ${others}</i></b></div><div class="hud-row muted"><span>VIA ANALYSE AVANCÉE</span><b>TABLEAU · FENÊTRES · PORTES</b></div>`;
   }
 
   // ---------------------------------------------------------- Audio : niveau, spectre, classification YAMNet
@@ -360,8 +365,9 @@ const start = () => {
     $('#collValidate').textContent = C.pending.length ? `✓ Valider la sélection (${nSel})` : '✓ Valider la sélection';
     $('#collToggle').disabled = !C.pending.length;
     $('#collToggle').textContent = nSel === C.pending.length ? 'Tout désélectionner' : 'Tout sélectionner';
-    $('#collSum').innerHTML = `<span>Inventaire : <b>${C.items.length}</b> objet(s)</span>` + Object.entries(CONFIG_KEY).map(([cls, [k, label]]) => {
-      const n = C.items.filter((i) => i.cls === cls).length, exp = E.state.config[k];
+    $('#collSum').innerHTML = `<span>Inventaire : <b>${C.items.length}</b> objet(s)</span>` + GROUPS.map(([k, label, classes]) => {
+      const n = C.items.filter((i) => classes.includes(i.cls)).length, exp = E.state.config[k];
+      if (!n && (exp === null || exp === undefined)) return '';
       return `<span>${label} <b>${n}</b>${exp !== null && exp !== undefined ? ` / ${exp}` : ''}</span>`;
     }).join('') + `<button class="btn btn-ghost btn-sm" type="button" data-view="inventaire">Voir l'inventaire →</button>`;
     $('#collGrid').innerHTML = C.pending.map((i) => `<label class="coll-item${i.selected ? ' on' : ''}">
@@ -390,8 +396,9 @@ const start = () => {
   function fmtDT(d) { return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
   function renderInventory() {
     const g = $('#invGrid'); if (!g) return;
-    const rows = Object.entries(CONFIG_KEY).map(([cls, [k, label]]) => {
-      const n = C.items.filter((i) => i.cls === cls).length, exp = E.state.config[k];
+    const rows = GROUPS.map(([k, label, classes]) => {
+      const n = C.items.filter((i) => classes.includes(i.cls)).length, exp = E.state.config[k];
+      if (!n && (exp === null || exp === undefined)) return '';
       return `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${n}${exp !== null && exp !== undefined ? `<span class="kpi-of">/${exp}</span>` : ''}</div><div class="kpi-sub">${exp ? `${Math.round(Math.min(1, n / exp) * 100)} % de l'attendu` : 'non contrôlé'}</div></div>`;
     });
     $('#invKpis').innerHTML = rows.join('');
@@ -507,7 +514,23 @@ const start = () => {
   document.getElementById('btnStop').addEventListener('click', () => { if (S.on) exit(); });
   loadInv(); renderCollection(); renderInventory();
   if (location.hash === '#inventaire') renderInventory();
-  window.__ESC_SCAN__ = { S, A, C, enter, exit, addTrack };
+  /** Ajout d'objets venus de l'analyse avancée (image fixe) dans l'étape « À valider ». */
+  function addExternal(list) {
+    const counters = {};
+    [...C.items, ...C.pending].forEach((i) => { const n = parseInt(String(i.trackId).split('-')[1], 10) || 0; counters[i.cls] = Math.max(counters[i.cls] || 0, n); });
+    list.forEach((o) => {
+      counters[o.cls] = (counters[o.cls] || 0) + 1; C.seq++;
+      const k = CONFIG_KEY[o.cls];
+      C.pending.push({
+        key: `c${C.seq}`, trackId: `${PREFIX[o.cls] || 'OBJ'}-${String(counters[o.cls]).padStart(2, '0')}`, cls: o.cls, type: TYPE[o.cls] || o.cls.toUpperCase(),
+        score: o.score, threshold: E.thr(o.cls), model: 'OWL-ViT (zéro-shot)', at: new Date(), trackedS: 0, hits: 1,
+        bbox: o.bbox.map(Math.round), frame: o.frame, lum: o.lum ?? null, thumb: o.thumb, category: k ? k[1] : 'Hors référentiel', selected: true,
+      });
+    });
+    renderCollection();
+    $('#collectionCard').hidden = false;
+  }
+  window.__ESC_SCAN__ = { S, A, C, enter, exit, addTrack, addExternal };
 };
 
 if (window.__ESC__) start(); else document.addEventListener('esc:ready', start, { once: true });

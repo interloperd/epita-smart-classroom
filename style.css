@@ -244,6 +244,11 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
 /* ---------- Analyse avancée ---------- */
 .adv-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--violet-200); border-radius: 12px; background: #fff; }
 .adv-row .small { flex: 1 1 260px; }
+.adv-gallery { flex: 1 1 100%; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+.adv-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.adv-head b { color: var(--violet-900); font-weight: 600; font-size: .86rem; }
+.adv-head .btn { margin-left: auto; }
+@media (max-width: 640px) { .adv-head .btn { margin-left: 0; width: 100%; } }
 @media (max-width: 640px) { .adv-row .btn { width: 100%; white-space: normal; } }
 
 /* ---------- Plein écran caméra (natif + secours iPhone) ---------- */

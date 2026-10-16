@@ -86,7 +86,10 @@ const start = () => {
       // pas de double comptage : on écarte les bureaux OWL-ViT qui recouvrent une table déjà trouvée par COCO-SSD
       const cocoTables = E.filtered().filter((p) => p.cls === 'dining table' && p.bbox);
       preds = preds.filter((p) => p.cls !== 'desk' || !cocoTables.some((t) => iou(t.bbox, p.bbox) > 0.3));
+      // vignettes découpées dans l'image analysée (en mémoire uniquement)
+      found = preds.map((p, i) => ({ ...p, id: i, keep: true, frame: [bmp.width, bmp.height], ...cropOf(bmp, p.bbox) }));
       E.addAdvanced(preds);
+      renderGallery();
       const n = (k) => preds.filter((p) => p.cls === k).length;
       msg.textContent = `✓ Analyse avancée (${ms} ms) : +${n('desk')} table(s)/bureau(x), ${n('whiteboard')} tableau(x), ${n('window')} fenêtre(s), ${n('door')} porte(s). Tableau, fenêtres et portes sont désormais vérifiables pour cet audit.`;
     } catch (e) {
@@ -95,6 +98,50 @@ const start = () => {
       loading = null;
     } finally { btn.disabled = false; }
   }
+
+  // ---- Galerie des objets trouvés par l'analyse avancée
+  let found = [];
+  const LABEL = { desk: 'Table / bureau', whiteboard: 'Tableau', window: 'Fenêtre', door: 'Porte' };
+  function cropOf(bmp, [x, y, w, h]) {
+    try {
+      const c = document.createElement('canvas'); c.width = 160; c.height = 160;
+      const side = Math.max(w, h) * 1.08, cx = x + w / 2 - side / 2, cy = y + h / 2 - side / 2;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.fillStyle = '#2A1342'; g.fillRect(0, 0, 160, 160);
+      g.drawImage(bmp, cx, cy, side, side, 0, 0, 160, 160);
+      const d = g.getImageData(40, 40, 80, 80).data; let L = 0;
+      for (let i = 0; i < d.length; i += 4) L += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      return { thumb: c.toDataURL('image/jpeg', 0.78), lum: Math.round((L / (d.length / 4)) / 2.55) };
+    } catch { return { thumb: '', lum: null }; }
+  }
+  function renderGallery() {
+    const box = $('#advGallery');
+    if (!found.length) { box.hidden = true; return; }
+    box.hidden = false;
+    const kept = found.filter((f) => f.keep).length;
+    box.innerHTML = `<div class="adv-head"><b>Objets trouvés par l'analyse avancée</b><span class="muted small">${kept}/${found.length} retenu(s) dans l'audit · décochez une détection fausse</span>
+        <button class="btn btn-primary btn-sm" type="button" id="advToInv"${kept ? '' : ' disabled'}>＋ Ajouter la sélection à l'inventaire</button></div>
+      <div class="coll-grid">${found.map((f) => `<label class="coll-item${f.keep ? ' on' : ''}">
+        <input type="checkbox" data-adv="${f.id}" ${f.keep ? 'checked' : ''} aria-label="Retenir ${LABEL[f.cls]}">
+        ${f.thumb ? `<img src="${f.thumb}" alt="">` : '<img alt="">'}
+        <div><b>${LABEL[f.cls] || f.cls}</b><span>OWL-ViT · ${Math.round(f.score * 100)} %</span></div></label>`).join('')}</div>`;
+  }
+  $('#advGallery').addEventListener('change', (e) => {
+    const id = e.target.dataset.adv; if (id === undefined) return;
+    const f = found.find((x) => String(x.id) === id); if (!f) return;
+    f.keep = e.target.checked;
+    E.addAdvanced(found.filter((x) => x.keep).map(({ cls, score, bbox, source }) => ({ cls, score, bbox, source })));
+    renderGallery();
+  });
+  $('#advGallery').addEventListener('click', (e) => {
+    if (e.target.id !== 'advToInv') return;
+    const sel = found.filter((f) => f.keep);
+    if (!window.__ESC_SCAN__ || !sel.length) return;
+    window.__ESC_SCAN__.addExternal(sel);
+    e.target.disabled = true; e.target.textContent = `✓ ${sel.length} objet(s) envoyé(s) dans « À valider »`;
+    document.getElementById('collectionCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  document.addEventListener('esc:analyzed', () => { if (!E.state.advancedDone) { found = []; renderGallery(); } });
 
   btn.addEventListener('click', run);
 

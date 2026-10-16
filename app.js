@@ -388,7 +388,8 @@
       freeze();
       setBadge('Collection auditée · image de contexte');
     }
-    state.collectionMode = true; state.advancedDone = false;
+    state.collectionMode = true;
+    state.advancedDone = items.some((i) => ['desk', 'whiteboard', 'window', 'door'].includes(i.cls));
     state.imgW = els.frame.width; state.imgH = els.frame.height;
     state.measure = state.imgW ? measureImage(els.frame, state.imgW, state.imgH) : null;
     state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
@@ -916,6 +917,7 @@
     },
     refreshCollection(items) { // recalcul dynamique de l'audit quand l'inventaire change
       state.raw = items.map((i) => ({ cls: i.cls, score: i.score, bbox: null }));
+      state.advancedDone = items.some((i) => ['desk', 'whiteboard', 'window', 'door'].includes(i.cls));
       state.source = `Scan cumulé (${items.length} objet(s) collecté(s))`;
       state.analyzedAt = new Date();
       renderResults(); renderDashboard();
