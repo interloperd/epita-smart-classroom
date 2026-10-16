@@ -45,3 +45,23 @@ CREATE TABLE IF NOT EXISTS images (
 CREATE INDEX IF NOT EXISTS idx_anomalies_audit ON anomalies(audit_id);
 CREATE INDEX IF NOT EXISTS idx_anomalies_status ON anomalies(status);
 CREATE INDEX IF NOT EXISTS idx_audits_created ON audits(created_at);
+
+-- Comptes utilisateurs (mot de passe haché PBKDF2-SHA256 + sel aléatoire, jamais en clair)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  salt TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Avis laissés par les visiteurs (affichés sur le site vitrine)
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT,
+  rating INTEGER NOT NULL,
+  comment TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_created ON reviews(created_at);

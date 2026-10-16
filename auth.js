@@ -12,6 +12,20 @@
   const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch { /* */ } } };
 
   let mode = 'server'; // 'server' si l'API répond, sinon 'local'
+  let signup = false;   // formulaire en mode « Créer un compte »
+  const localUsers = { get() { try { return JSON.parse(localStorage.getItem('esc.localUsers') || '{}'); } catch { return {}; } }, set(v) { try { localStorage.setItem('esc.localUsers', JSON.stringify(v)); } catch { /* */ } } };
+  function setSignup(on) {
+    signup = on;
+    $('#authTitle').textContent = on ? 'Créer un compte' : 'Connexion';
+    $('#authSub').textContent = on ? 'Créez votre accès en quelques secondes.' : 'Espace réservé aux responsables des salles.';
+    $('#confirmWrap').hidden = !on; $('#pwRules').hidden = !on;
+    $('#loginPass2').required = on;
+    $('#loginPass').autocomplete = on ? 'new-password' : 'current-password';
+    $('#loginBtn').textContent = on ? 'Créer mon compte' : 'Se connecter';
+    $('#switchText').textContent = on ? 'Déjà un compte ?' : 'Pas encore de compte ?';
+    $('#switchMode').textContent = on ? 'Se connecter' : 'Créer un compte';
+    $('#authMsg').textContent = '';
+  }
 
   function unlock(user) {
     document.body.classList.remove('locked');
@@ -36,7 +50,8 @@
       return lock();
     } catch {
       mode = 'local';
-      if (ss.get('esc.auth') === LOCAL_HASH) return unlock('admin');
+      const tok = ss.get('esc.auth'), who = ss.get('esc.authUser') || 'admin';
+      if (tok && (tok === LOCAL_HASH || localUsers.get()[who] === tok)) return unlock(who);
       return lock();
     }
   }
@@ -46,14 +61,30 @@
     const user = $('#loginUser').value.trim(), password = $('#loginPass').value;
     const btn = $('#loginBtn'); btn.disabled = true; $('#authMsg').textContent = 'Vérification…';
     try {
+      if (signup) {
+        if (!/^[a-zA-Z0-9._-]{3,30}$/.test(user)) throw new Error('Identifiant : 3 à 30 caractères (lettres, chiffres, point, tiret, souligné).');
+        if (password.length < 8) throw new Error('Mot de passe : 8 caractères minimum.');
+        if (password !== $('#loginPass2').value) throw new Error('Les deux mots de passe ne correspondent pas.');
+        if (mode === 'server') {
+          const r = await fetch('/api/register', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user, password }) });
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(j.error || 'Création impossible.');
+          $('#loginPass').value = ''; $('#loginPass2').value = ''; setSignup(false); return unlock(j.user);
+        }
+        const u = localUsers.get(), key = user.toLowerCase();
+        if (key === 'admin' || u[key]) throw new Error('Cet identifiant est déjà pris.');
+        u[key] = await sha256(`${key}:${password}`); localUsers.set(u);
+        ss.set('esc.auth', u[key]); ss.set('esc.authUser', key); $('#loginPass').value = ''; $('#loginPass2').value = ''; setSignup(false); return unlock(key);
+      }
       if (mode === 'server') {
         const r = await fetch('/api/login', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user, password }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || 'Connexion refusée.');
         $('#loginPass').value = ''; unlock(j.user);
       } else {
-        if ((await sha256(`${user}:${password}`)) !== LOCAL_HASH) { await new Promise((r) => setTimeout(r, 600)); throw new Error('Identifiant ou mot de passe incorrect.'); }
-        ss.set('esc.auth', LOCAL_HASH); $('#loginPass').value = ''; unlock(user);
+        const key = user.toLowerCase(), h = await sha256(`${key}:${password}`), u = localUsers.get();
+        if (h !== LOCAL_HASH && u[key] !== h) { await new Promise((r) => setTimeout(r, 600)); throw new Error('Identifiant ou mot de passe incorrect.'); }
+        ss.set('esc.auth', h); ss.set('esc.authUser', key); $('#loginPass').value = ''; unlock(key);
       }
     } catch (err) {
       $('#authMsg').textContent = err.message || 'Connexion impossible.';
@@ -63,7 +94,7 @@
 
   async function logout() {
     if (mode === 'server') { try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch { /* */ } }
-    ss.set('esc.auth', null);
+    ss.set('esc.auth', null); ss.set('esc.authUser', null);
     if (window.__ESC__ && window.__ESC__.stopCamera) window.__ESC__.stopCamera();
     lock('Vous êtes déconnecté·e.');
   }
@@ -71,6 +102,7 @@
   const start = () => {
     $('#loginForm').addEventListener('submit', submit);
     $('#logoutBtn').addEventListener('click', logout);
+    $('#switchMode').addEventListener('click', () => setSignup(!signup));
     $('#togglePass').addEventListener('click', () => { const p = $('#loginPass'); p.type = p.type === 'password' ? 'text' : 'password'; $('#togglePass').textContent = p.type === 'password' ? 'Afficher' : 'Masquer'; });
     check();
   };

@@ -209,6 +209,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T21 | Salle 3D + OWL-ViT (pipeline simulé) : tableau, 2 fenêtres, porte, écran doublon de la « tv » COCO | Tableau 1/1, fenêtres 2/3, porte 1/1, écran compté une seule fois ; taux de détection recalculé sur 7 catégories | ✅ Conforme |
 | T22 | Authentification : API sans session, mauvais mot de passe, cookie falsifié, connexion admin, rechargement, déconnexion | 401 ; refus + délai ; 401 ; accès ; session conservée ; écran de connexion | ✅ Conforme |
 | T23 | Anomalies audio : sirène ×3, circulation ×5, pic sonore 82/100 | 3 anomalies « Audio » (Majeure, Mineure, Majeure) enregistrées en base et listées dans le rapport | ✅ Conforme |
+| T24 | Création de compte + avis : compte « dima » (doublon refusé, mot de passe court refusé, hash PBKDF2 en base), connexion du nouveau compte ; avis publié, avis invalide refusé, injection HTML neutralisée, suppression anonyme refusée | Conformes | ✅ Conforme |
 | T17 | Tolérance d'écart | Écart dans la tolérance → « Conforme (tolérance) » | ✅ Conforme |
 | T18 | Inventaire cumulé : ajouter 4 objets, en décocher 1, valider, retirer 1 | 3 objets en inventaire puis 2 ; audit lié recalculé automatiquement (3 → 2) | ✅ Conforme |
 | T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |

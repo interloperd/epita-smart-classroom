@@ -19,6 +19,7 @@
   <!-- Bibliothèques de vision (provenance documentée dans le README) -->
   <!-- TensorFlow.js et COCO-SSD sont chargés à la demande (ouverture de l'Audit), voir app.js -->
   <script defer src="auth.js"></script>
+  <script defer src="reviews.js"></script>
   <script defer src="app.js"></script>
   <script defer src="registry.js"></script>
   <script defer src="weather.js"></script>
@@ -40,16 +41,25 @@
     <form class="auth-card" id="loginForm" autocomplete="on">
       <svg class="auth-mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="none" stroke="currentColor" stroke-width="1.2"/><g fill="currentColor"><circle cx="12" cy="15" r="1.6"/><circle cx="21" cy="11" r="1.2"/><circle cx="28" cy="18" r="1.8"/><circle cx="17" cy="26" r="1.3"/><circle cx="26" cy="28" r="1.1"/></g><path d="M12 15 L21 11 L28 18 L26 28 L17 26 Z" fill="none" stroke="currentColor" stroke-width=".6" opacity=".6"/></svg>
       <p class="eyebrow">EPITA Smart Classroom</p>
-      <h1>Connexion</h1>
-      <p class="muted small">Espace réservé aux responsables des salles.</p>
+      <h1 id="authTitle">Connexion</h1>
+      <p class="muted small" id="authSub">Espace réservé aux responsables des salles.</p>
       <label for="loginUser">Identifiant</label>
       <input id="loginUser" name="username" type="text" autocomplete="username" required autocapitalize="none" spellcheck="false">
       <label for="loginPass">Mot de passe</label>
       <div class="auth-pass"><input id="loginPass" name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePass" class="auth-toggle">Afficher</button></div>
+      <div id="confirmWrap" hidden><label for="loginPass2">Confirmer le mot de passe</label><input id="loginPass2" type="password" autocomplete="new-password"></div>
+      <p class="muted small" id="pwRules" hidden>8 caractères minimum. Votre mot de passe est haché (PBKDF2) et jamais stocké en clair.</p>
       <button class="btn btn-primary btn-block" id="loginBtn" type="submit">Se connecter</button>
       <p class="auth-msg" id="authMsg" role="alert" aria-live="polite"></p>
+      <p class="auth-switch"><span id="switchText">Pas encore de compte ?</span> <button type="button" id="switchMode" class="auth-link">Créer un compte</button></p>
       <p class="muted small auth-hint">Démonstration : <b>admin</b> / <b>admin</b> · <a href="vitrine.html">Découvrir la solution</a></p>
     </form>
+    <aside class="auth-reviews" data-reviews data-limit="2">
+      <p class="eyebrow">Avis des visiteurs</p>
+      <div class="rv-summary" data-rv-summary></div>
+      <div class="rv-list" data-rv-list></div>
+      <a href="vitrine.html#avis">Voir tous les avis · donner le vôtre →</a>
+    </aside>
   </div>
 
   <header class="topbar">

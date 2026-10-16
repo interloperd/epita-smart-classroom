@@ -255,6 +255,22 @@ body.locked > header, body.locked > main, body.locked > footer, body.locked > .b
 .auth-card .btn-block { margin-top: 18px; }
 .auth-msg { min-height: 1.2em; font-size: .82rem; color: var(--violet-900); font-weight: 500; margin: 6px 0 0; }
 .auth-hint { margin: 4px 0 0; } .auth-hint a { color: var(--violet); }
+.auth-gate { grid-template-columns: auto; gap: 20px; align-content: center; overflow-y: auto; }
+@media (min-width: 900px) { .auth-gate { grid-template-columns: 400px 340px; justify-content: center; } }
+.auth-switch { font-size: .82rem; margin: 8px 0 0; color: var(--ink-2); }
+.auth-link { font: 600 .82rem var(--font); color: var(--violet); background: none; border: 0; cursor: pointer; padding: 0; text-decoration: underline; }
+.auth-reviews { width: min(400px, 100%); color: #fff; justify-self: center; }
+.auth-reviews .eyebrow { color: var(--violet-200); }
+.auth-reviews .rv-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.auth-reviews .rv-avg { font-size: 2.2rem; font-weight: 200; line-height: 1; }
+.auth-reviews .rv-stars { color: #E3D2F7; letter-spacing: 2px; }
+.auth-reviews .rv-count { font-size: .78rem; color: var(--violet-200); }
+.auth-reviews .rv { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+.auth-reviews .rv-head { display: flex; justify-content: space-between; font-size: .72rem; color: var(--violet-200); }
+.auth-reviews .rv-text { font-size: .86rem; margin: 8px 0 6px; color: #fff; overflow-wrap: anywhere; }
+.auth-reviews .rv-who { font-size: .76rem; margin: 0; color: var(--violet-200); } .auth-reviews .rv-who b { color: #fff; }
+.auth-reviews .rv-del { display: none; }
+.auth-reviews a { color: #fff; font-size: .82rem; }
 .auth-user { font-size: .74rem; color: var(--ink-2); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
 .auth-logout { font: 500 .72rem var(--font); color: var(--violet); background: none; border: 1px solid var(--violet-200); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 

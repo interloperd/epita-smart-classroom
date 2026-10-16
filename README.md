@@ -95,6 +95,8 @@ Chaque `git push` sur `main` redéploie automatiquement l'application.
 |---|---|---|
 | `/api/health` | GET | état des liaisons (public) |
 | `/api/login` · `/api/logout` · `/api/me` | POST · POST · GET | connexion, déconnexion, session en cours |
+| `/api/register` | POST | création de compte (public) |
+| `/api/reviews` · `/api/reviews/:id` | GET, POST (public) · DELETE (connecté) | avis des visiteurs |
 | `/api/audits` | GET / POST | liste / enregistrement d'un audit (+ anomalies + image) |
 | `/api/audits/:id` | GET / DELETE | détail / suppression complète |
 | `/api/images/:id` | GET | image d'un audit |
@@ -141,6 +143,8 @@ Les catégories non prises en charge sont affichées comme **« Non vérifiable 
 | Injection SQL | Requêtes D1 **paramétrées** (`bind`) uniquement |
 | XSS | Toute donnée saisie ou lue en base est **échappée** avant affichage (`esc`) |
 | Authentification | Écran de connexion (démo **admin / admin**), vérifié **côté serveur** (`/api/login`) ; session **cookie HttpOnly, Secure, SameSite=Strict**, signée **HMAC-SHA256**, valable 8 h ; délai anti-force brute ; déconnexion. Identifiants modifiables via `ADMIN_USER` / `ADMIN_PASSWORD` (+ `SESSION_SECRET`) dans Cloudflare |
+| Création de compte | `/api/register` : identifiant 3–30 caractères, mot de passe ≥ 8, **haché PBKDF2-SHA256 (100 000 itérations, sel aléatoire)** dans D1, jamais en clair ; connexion automatique |
+| Avis visiteurs | `/api/reviews` public (lecture et dépôt validés : nom, note 1–5, 10–500 caractères, champ-piège anti-robots) ; suppression réservée aux comptes connectés ; affichage échappé (anti-XSS). **Aucun avis rédigé par l'équipe** |
 | Contrôle d'accès API | Toute route `/api/*` (sauf `health`, `login`, `logout`, `me`) exige une session valide, ou le code `ACCESS_CODE` ; comparaisons à temps constant |
 | Validation des entrées | Types, longueurs (`clip`), statuts autorisés, images JPEG/PNG/WebP ≤ 1,5 Mo, requêtes ≤ 2 Mo |
 | Données personnelles | Personnes exclues, IA locale, pas d'audio stocké, image archivée seulement sur choix explicite, suppression possible (droit à l'effacement) |

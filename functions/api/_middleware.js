@@ -1,8 +1,8 @@
 // Contrôle d'accès de l'API : session valide (connexion admin) OU code d'accès ACCESS_CODE (si défini).
-// Routes publiques : /api/health, /api/login, /api/logout, /api/me.
+// Routes publiques : health, login, logout, me, register, reviews (lecture et dépôt d'avis). La suppression d'un avis exige une session.
 import { fail, readSession, safeEqual } from '../../lib/api.js';
 
-const PUBLIC = new Set(['/api/health', '/api/login', '/api/logout', '/api/me']);
+const PUBLIC = new Set(['/api/health', '/api/login', '/api/logout', '/api/me', '/api/register', '/api/reviews']);
 
 export async function onRequest(context) {
   const { request, env, next } = context;

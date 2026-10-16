@@ -17,6 +17,7 @@
   } }
   </script>
   <script type="module" src="vitrine.js"></script>
+  <script defer src="reviews.js"></script>
   <script>
     // Repli si Three.js ne se charge pas (réseau) : message clair au lieu d'un écran figé
     setTimeout(function () {
@@ -36,6 +37,7 @@
       <a href="#demo">Salle 3D</a>
       <a href="#solution">Fonctionnement</a>
       <a href="#confiance">Confiance</a>
+      <a href="#avis">Avis</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="index.html#audit">Ouvrir l'application</a>
   </header>
@@ -206,6 +208,31 @@
       </div>
       <div class="stack">
         <span>HTML · CSS · JavaScript</span><span>TensorFlow.js 4.22</span><span>COCO-SSD 2.2.3</span><span>Three.js 0.160</span><span>GitHub</span><span>Cloudflare Pages</span>
+      </div>
+    </section>
+
+    <!-- AVIS -->
+    <section id="avis" class="reviews-sec" data-reviews data-limit="12">
+      <div class="section-head">
+        <p class="eyebrow">Avis</p>
+        <h2>Ce qu'en pensent ceux qui l'ont essayée</h2>
+        <p class="muted">Avis réels déposés par les visiteurs du site, publiés tels quels. Aucun avis n'est rédigé par l'équipe.</p>
+      </div>
+      <div class="rv-summary" data-rv-summary></div>
+      <div class="rv-grid">
+        <div class="rv-list" data-rv-list></div>
+        <form class="rv-form" data-rv-form>
+          <h3>Donner votre avis</h3>
+          <div class="rv-rate" role="group" aria-label="Note">
+            <button type="button" data-star="1" aria-label="1 étoile">★</button><button type="button" data-star="2" aria-label="2 étoiles">★</button><button type="button" data-star="3" aria-label="3 étoiles">★</button><button type="button" data-star="4" aria-label="4 étoiles">★</button><button type="button" data-star="5" aria-label="5 étoiles">★</button>
+          </div>
+          <label>Votre nom ou prénom<input name="name" type="text" maxlength="40" required></label>
+          <label>Votre rôle <span class="muted">(facultatif)</span><input name="role" type="text" maxlength="60" placeholder="ex. étudiant·e EPITA, responsable logistique"></label>
+          <label>Votre avis<textarea name="comment" rows="4" minlength="10" maxlength="500" required></textarea></label>
+          <input name="website" type="text" class="rv-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn btn-primary btn-block" type="submit">Publier mon avis</button>
+          <p class="rv-msg" data-rv-msg role="status" aria-live="polite"></p>
+        </form>
       </div>
     </section>
 
