@@ -446,10 +446,30 @@
   els.btnBack.addEventListener('click', () => { unfreeze(); setBadge('Caméra active · rien n\'est enregistré'); });
   els.fileInput.addEventListener('change', (e) => analyzeFile(e.target.files[0]));
   // Plein écran et grille de cadrage
-  $('#btnFullStage').addEventListener('click', () => {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (els.stage.requestFullscreen) els.stage.requestFullscreen().catch(() => {});
-  });
+  // Plein écran : API native si disponible, sinon plein écran « de secours » en CSS (iPhone / Safari)
+  function isFull() { return !!document.fullscreenElement || els.stage.classList.contains('pseudo-full'); }
+  function pseudo(on) { els.stage.classList.toggle('pseudo-full', on); document.body.classList.toggle('no-scroll', on); }
+  async function enterFull() {
+    const st = els.stage;
+    try {
+      if (st.requestFullscreen) await st.requestFullscreen();
+      else if (st.webkitRequestFullscreen) st.webkitRequestFullscreen();
+      else pseudo(true);
+    } catch { pseudo(true); }
+    try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch { /* non supporté */ }
+  }
+  function exitFull() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    pseudo(false);
+  }
+  const toggleFull = () => (isFull() ? exitFull() : enterFull());
+  $('#btnFullStage').addEventListener('click', toggleFull);
+  $('#fsEnter').addEventListener('click', enterFull);
+  $('#fsExit').addEventListener('click', exitFull);
+  $('#fsCapture').addEventListener('click', () => { if (state.stream && state.model) capture(); });
+  $('#fsScan').addEventListener('click', () => { const b = document.getElementById('btnScan'); if (b && !b.disabled) b.click(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && els.stage.classList.contains('pseudo-full')) pseudo(false); });
+  window.__ESC_FULL__ = { enterFull, exitFull, isFull };
   const grid = $('#frameGuide'), tGrid = $('#tGrid');
   tGrid.checked = store.get('esc.grid', true); grid.classList.toggle('on', tGrid.checked);
   tGrid.addEventListener('change', () => { grid.classList.toggle('on', tGrid.checked); store.set('esc.grid', tGrid.checked); });

@@ -465,14 +465,14 @@ const start = () => {
     if (!keepAmbient) E.state.ambient = null;
     if (A.on) micOff();
     renderCollection();
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
   $('#btnScan').addEventListener('click', () => (S.on ? exit() : enter()));
   $('#hudExit').addEventListener('click', () => exit());
   $('#hudMic').addEventListener('click', () => (A.on ? micOff() : micOn()));
   $('#hudFull').addEventListener('click', () => {
-    if (document.fullscreenElement) document.exitFullscreen(); else if (stage.requestFullscreen) stage.requestFullscreen().catch(() => {});
+    const F = window.__ESC_FULL__; if (!F) return;
+    if (F.isFull()) F.exitFull(); else F.enterFull();
   });
   $('#hudCapture').addEventListener('click', async () => {
     if (C.pending.length) { $('#collectionCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
