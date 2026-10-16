@@ -19,7 +19,7 @@ vp.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#2A1342');
-const camera = new THREE.PerspectiveCamera(55, 16 / 10, 0.05, 100);
+const camera = new THREE.PerspectiveCamera(55, 16 / 10, 0.1, 60); // near/far resserrés = meilleure précision de profondeur
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -57,8 +57,12 @@ const box = (w, h, d, mat, cast = true) => {
 const room = box(W, H, D, M.wall, false);
 room.position.y = H / 2;
 scene.add(room);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), M.floor);
-floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+// Sol : dalle épaisse (15 cm) dont la face supérieure est à +5 mm, au-dessus du fond de la pièce
+// → supprime le « z-fighting » (scintillement) entre le sol et la face inférieure du volume de la salle.
+const FLOOR_T = 0.15;
+const floor = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, FLOOR_T, D + 0.02), M.floor);
+floor.position.y = 0.005 - FLOOR_T / 2;
+floor.receiveShadow = true;
 scene.add(floor);
 // plinthes
 [[0, -D / 2 + 0.01, W, 0], [0, D / 2 - 0.01, W, 0], [-W / 2 + 0.01, 0, D, Math.PI / 2], [W / 2 - 0.01, 0, D, Math.PI / 2]].forEach(([x, z, len, r]) => {
@@ -179,7 +183,8 @@ sun.position.set(-9, 6, 2);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 });
-sun.shadow.bias = -0.0005;
+sun.shadow.bias = -0.0008;
+sun.shadow.normalBias = 0.02; // évite l'« acné » d'ombre sur le sol
 scene.add(sun);
 const ceilingLights = [];
 for (const x of [-2.2, 2.2]) for (const z of [-3, 0, 3]) {
