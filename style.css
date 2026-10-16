@@ -254,6 +254,44 @@ body.no-scroll { overflow: hidden; }
 .stage.pseudo-full .hud-tr #hudFull { display: none; }
 .stage:fullscreen .frame-guide em, .stage.pseudo-full .frame-guide em { display: none; }
 
+/* ---------- Responsive global : aucun débordement horizontal ---------- */
+html, body { max-width: 100%; overflow-x: hidden; }
+main, .view, .card, .report, .audit-layout > *, .results-col > *, .grid-2 > * { min-width: 0; }
+.report, .card { overflow-wrap: anywhere; }
+.report .table-wrap { margin: 0 -4px; }
+@media (max-width: 640px) {
+  /* Tableaux → cartes empilées (libellé de colonne à gauche, valeur à droite) */
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { border: 1px solid var(--line); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px; background: #fff; }
+  .table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--line); text-align: right; }
+  .table td:last-child { border-bottom: 0; }
+  .table td::before { content: attr(data-label); flex: 0 0 42%; text-align: left; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .table td:not([data-label])::before, .table td[data-label=""]::before { display: none; }
+  .table td[colspan] { justify-content: flex-start; text-align: left; }
+  .table td.num { text-align: right; }
+  .table td .tag { white-space: normal; text-align: right; }
+  .table td > input, .table td > select { max-width: 56%; min-width: 0 !important; }
+  .ano-table td:nth-child(5) { flex-direction: column; align-items: flex-start; text-align: left; }
+  .ano-table td:nth-child(5)::before { flex: none; }
+  .table-wrap { overflow: visible; }
+  .report { padding: 22px 16px; }
+  .report h1 { font-size: 1.5rem; }
+  .report .meta { grid-template-columns: 1fr 1fr; }
+  .view-head h2 { font-size: 1.6rem; }
+  .view-head .btn-row { width: 100%; }
+  .view-head .btn-row > * { flex: 1 1 auto; }
+  #accessCode, #anoFilter { width: 100%; }
+  .controls .btn, .controls .file-btn { flex: 1 1 calc(50% - 10px); padding: 11px 12px; font-size: .8rem; }
+  .controls #btnScan { flex-basis: 100%; }
+  .params { gap: 16px; }
+  .kpi-value { font-size: 1.9rem; }
+  .fiche-grid, .arch-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .hero { padding-top: 24px; }
+  .footer { padding: 18px 16px; }
+}
+
 /* ---------- Mode Scan (HUD temps réel) ---------- */
 #hud { pointer-events: none; z-index: 4; display: none; }
 .stage.scan #hud { display: block; }
@@ -393,7 +431,9 @@ body.no-scroll { overflow: hidden; }
 /* ---------- Responsive ---------- */
 @media (max-width: 1000px) {
   .topbar { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
-  .nav { order: 3; width: 100%; margin: 0; overflow-x: auto; flex-wrap: nowrap; }
+  .nav { order: 3; width: 100%; margin: 0; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .nav::-webkit-scrollbar { display: none; }
+  .brand-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .model-status { margin-left: auto; }
   main { padding: 20px 16px; }
   .banner { margin: 12px 16px 0; flex-direction: column; align-items: flex-start; }

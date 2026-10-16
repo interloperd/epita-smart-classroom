@@ -725,14 +725,14 @@
       <p>Audit visuel automatisé de la configuration de la salle par détection d'objets (apprentissage supervisé, modèle pré-entraîné COCO-SSD exécuté dans le navigateur). Les valeurs attendues sont fictives et servent à la démonstration. Aucune personne n'a été analysée et aucune image n'a été enregistrée ni transmise.</p>
 
       <h2>2. Objets détectés</h2>
-      ${detected.length ? `<table class="table"><thead><tr><th>Objet</th><th>Classe COCO</th><th class="num">Nombre</th><th class="num">Confiance (min–max)</th></tr></thead><tbody>
+      ${detected.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>Objet</th><th>Classe COCO</th><th class="num">Nombre</th><th class="num">Confiance (min–max)</th></tr></thead><tbody>
         ${detected.map(([k, e]) => `<tr><td>${esc(fr(k))}</td><td class="code">${esc(k)}</td><td class="num">${e.n}</td><td class="num">${pct(e.min)} – ${pct(e.max)}</td></tr>`).join('')}
-      </tbody></table>` : '<p class="muted">Aucun objet détecté au-dessus du seuil.</p>'}
+      </tbody></table></div>` : '<p class="muted">Aucun objet détecté au-dessus du seuil.</p>'}
 
       <h2>3. Quantités attendues et observées</h2>
-      <table class="table"><thead><tr><th>Catégorie</th><th class="num">Attendu</th><th class="num">Observé</th><th class="num">Écart</th><th>Statut</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Catégorie</th><th class="num">Attendu</th><th class="num">Observé</th><th class="num">Écart</th><th>Statut</th></tr></thead><tbody>
         ${a.rows.map((r) => `<tr><td>${esc(r.label)}</td><td class="num">${r.expected ?? '—'}</td><td class="num">${r.detected ?? (r.supported ? '—' : 'n/a')}</td><td class="num">${r.gap === null ? '—' : (r.gap > 0 ? '+' : '') + r.gap}</td><td>${r.status.sym} ${esc(r.status.label)}</td></tr>`).join('')}
-      </tbody></table>
+      </tbody></table></div>
 
       <h2>4. Écarts identifiés</h2>
       ${a.gaps.length ? `<ul>${a.gaps.map((r) => `<li><b>${esc(r.label)}</b> : attendu ${r.expected}, observé ${r.detected} (${r.gap > 0 ? '+' : ''}${r.gap}).</li>`).join('')}</ul>`
@@ -857,6 +857,22 @@
   // ------------------------------------------------------------------
   // 13. Initialisation
   // ------------------------------------------------------------------
+  // Responsive : chaque cellule reçoit le libellé de sa colonne (affiché en mode carte sur mobile)
+  function labelTables(root = document) {
+    root.querySelectorAll('table.table').forEach((t) => {
+      const heads = [...t.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+      if (!heads.length) return;
+      t.querySelectorAll('tbody tr').forEach((tr) => {
+        [...tr.children].forEach((td, i) => { if (!td.hasAttribute('colspan') && td.dataset.label !== heads[i]) td.dataset.label = heads[i] || ''; });
+      });
+    });
+  }
+  let labelQueued = false;
+  new MutationObserver(() => {
+    if (labelQueued) return; labelQueued = true;
+    requestAnimationFrame(() => { labelQueued = false; labelTables(); });
+  }).observe(document.querySelector('main'), { childList: true, subtree: true });
+
   function init() {
     const saved = store.get('esc.config', null);
     state.config = saved || Object.fromEntries(CATEGORIES.map((c) => [c.key, c.example]));
