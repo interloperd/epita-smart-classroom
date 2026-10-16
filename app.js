@@ -776,7 +776,8 @@
       <h2>5. Qualité de la prise de vue et anomalies</h2>
       ${!state.quality ? '<p class="muted">—</p>' : `<p>Qualité estimée : <b>${esc(state.quality.grade)}</b>${state.measure ? ` · luminosité ${Math.round(state.measure.mean / 2.55)} % · netteté ${Math.round(state.measure.sharp)}` : ''}.</p>
         ${state.quality.list.length ? `<ul>${state.quality.list.map((q) => `<li><b>${esc(q.title)}</b> — ${esc(q.advice)}</li>`).join('')}</ul>` : '<p>Aucune anomalie de prise de vue détectée.</p>'}`}
-      ${state.ambient ? `<p><b>Ambiance sonore</b> (catégories anonymes, aucun enregistrement) : niveau ${esc(state.ambient.label)} (${state.ambient.level}/100)${state.ambient.top.length ? ` · ${state.ambient.top.map((s) => `${esc(s.name)} ${Math.round(s.score * 100)} %`).join(', ')}` : ''}.</p>` : ''}
+      ${state.ambient ? `<p><b>Ambiance sonore</b> (catégories anonymes, aucun enregistrement) : niveau ${esc(state.ambient.label)} (${state.ambient.level}/100${state.ambient.peak ? `, pic ${state.ambient.peak}/100` : ''})${state.ambient.top.length ? ` · ${state.ambient.top.map((s) => `${esc(s.name)} ${Math.round(s.score * 100)} %`).join(', ')}` : ''}.</p>
+        ${(state.ambient.events || []).length ? `<p><b>Anomalies audio</b> :</p><ul>${state.ambient.events.map((ev) => `<li><b>${esc(ev.cat)}</b> (${esc(ev.sev)}) — ${ev.count} détection(s). ${esc(ev.action)}</li>`).join('')}</ul>` : '<p class="muted small">Aucun bruit perturbant détecté pendant le scan.</p>'}` : ''}
 
       <h2>6. Catégories non prises en charge</h2>
       <ul>${CATEGORIES.filter((c) => !c.coco.length).map((c) => `<li><b>${esc(c.label)}</b> — ${state.advancedDone ? 'absent de COCO, vérifié par l\'analyse avancée OWL-ViT (détection zéro-shot, fiabilité moindre : contrôle visuel conseillé).' : esc(c.note)}</li>`).join('')}

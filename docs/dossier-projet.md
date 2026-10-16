@@ -146,6 +146,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | US17 | Je veux une **salle de classe 3D de démonstration** dont le contenu exact est connu, afin de tester la détection et mesurer le taux de détection sans image interne. | Should | ✅ Fait |
 | US18 | Je veux un **mode Scan vidéo temps réel** (suivi des objets, inventaire en direct, alertes) avec un bouton de capture, afin de cadrer et d'auditer en continu. | Should | ✅ Fait |
 | US19 | Je veux connaître **l'ambiance sonore** de la salle (niveau, catégories de bruit : circulation, voix, alarme…), de façon anonyme. | Could | ✅ Fait |
+| US19b | Je veux que les **bruits perturbants** (sirène d'ambulance, alarme, travaux, circulation) deviennent des **anomalies** avec gravité et action corrective. | Should | ✅ Fait |
 | US20 | Je veux fixer une **tolérance d'écart**, afin de ne pas déclencher d'alerte pour un écart non significatif. | Should | ✅ Fait |
 | US21 | En tant que responsable, je veux **archiver les audits** (avec image si autorisé) dans une base, afin d'en garder la trace. | Must | ✅ Fait |
 | US22 | Je veux un **registre des anomalies** (gravité, statut, commentaire, export CSV), afin de piloter les actions correctives jusqu'à leur résolution. | Must | ✅ Fait |
@@ -207,6 +208,7 @@ Priorités selon la méthode MoSCoW (Must, Should, Could). Les tâches sont suiv
 | T20 | Analyse avancée OWL-ViT (pipeline simulé) : bureau recouvrant une table COCO, 2 requêtes sur le même bureau, tableau, fenêtre sous le seuil | Doublon écarté, requêtes fusionnées (NMS) → +1 table ; Tableau « Conforme » ; 1 fenêtre ; fenêtre à 5 % ignorée | ✅ Conforme (logique ; inférence réelle à valider en ligne) |
 | T21 | Salle 3D + OWL-ViT (pipeline simulé) : tableau, 2 fenêtres, porte, écran doublon de la « tv » COCO | Tableau 1/1, fenêtres 2/3, porte 1/1, écran compté une seule fois ; taux de détection recalculé sur 7 catégories | ✅ Conforme |
 | T22 | Authentification : API sans session, mauvais mot de passe, cookie falsifié, connexion admin, rechargement, déconnexion | 401 ; refus + délai ; 401 ; accès ; session conservée ; écran de connexion | ✅ Conforme |
+| T23 | Anomalies audio : sirène ×3, circulation ×5, pic sonore 82/100 | 3 anomalies « Audio » (Majeure, Mineure, Majeure) enregistrées en base et listées dans le rapport | ✅ Conforme |
 | T17 | Tolérance d'écart | Écart dans la tolérance → « Conforme (tolérance) » | ✅ Conforme |
 | T18 | Inventaire cumulé : ajouter 4 objets, en décocher 1, valider, retirer 1 | 3 objets en inventaire puis 2 ; audit lié recalculé automatiquement (3 → 2) | ✅ Conforme |
 | T13 | Salle 3D : éclairages jour / soir / contre-jour, 4 points de vue | Rendu correct, détection lancée sur la vue, taux de détection calculé vs vérité terrain | ✅ Conforme (rendu WebGL) |

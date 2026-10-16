@@ -28,7 +28,18 @@ const SOUND_FR = {
   'Chewing, mastication': 'Mastication', 'Clapping': 'Claquements de mains', 'Cough': 'Toux', 'White noise': 'Bruit blanc',
   'Hum': 'Bourdonnement', 'Buzz': 'Bourdonnement', 'Static': 'Grésillement', 'Engine': 'Moteur', 'Tick': 'Tic-tac', 'Television': 'Télévision',
 };
-const ALERT_SOUNDS = new Set(['Siren', 'Alarm', 'Fire alarm', 'Vehicle horn, car horn, honking', 'Drill', 'Power tool', 'Hammer', 'Emergency vehicle']);
+const ALERT_SOUNDS = new Set(['Siren', 'Alarm', 'Fire alarm', 'Vehicle horn, car horn, honking', 'Drill', 'Power tool', 'Hammer', 'Emergency vehicle',
+  'Ambulance (siren)', 'Police car (siren)', 'Fire engine, fire truck (siren)', 'Civil defense siren', 'Smoke detector, smoke alarm', 'Jackhammer', 'Sawing',
+  'Traffic noise, roadway noise', 'Truck', 'Motorcycle', 'Aircraft', 'Train', 'Music', 'Television', 'Telephone', 'Ringtone']);
+/** Bruits perturbants → anomalie audio : gravité et action corrective (catégories anonymes, aucun enregistrement). */
+const NOISE_RULES = [
+  { re: /Fire alarm|Smoke detector/, sev: 'Critique', cat: 'Alarme incendie', action: 'Vérifier immédiatement l\'origine de l\'alarme et appliquer la procédure d\'évacuation.' },
+  { re: /Siren|Emergency vehicle|Ambulance|Police car|Fire engine|Civil defense/, sev: 'Majeure', cat: 'Sirène (véhicule d\'urgence)', action: 'Bruit extérieur perturbant : fermer les fenêtres côté rue ; si récurrent, privilégier une salle côté cour.' },
+  { re: /Alarm/, sev: 'Majeure', cat: 'Alarme', action: 'Identifier l\'alarme (réveil, équipement) et la couper ; signaler au service technique si elle persiste.' },
+  { re: /Drill|Power tool|Hammer|Jackhammer|Sawing/, sev: 'Majeure', cat: 'Travaux', action: 'Signaler les travaux à la logistique et planifier les cours hors des créneaux bruyants.' },
+  { re: /Traffic|Vehicle horn|Truck|Motorcycle|Aircraft|Train/, sev: 'Mineure', cat: 'Circulation', action: 'Fermer les fenêtres pendant le cours ; vérifier l\'isolation phonique de la salle.' },
+  { re: /Music|Television|Telephone|Ringtone/, sev: 'Mineure', cat: 'Appareil sonore', action: 'Éteindre ou mettre en silencieux l\'appareil identifié avant le cours.' },
+];
 
 const start = () => {
   const E = window.__ESC__;
@@ -68,7 +79,7 @@ const start = () => {
     } catch { /* stockage indisponible */ }
   }
   const addBtns = new Map();
-  const A = { on: false, stream: null, ac: null, analyser: null, proc: null, classifier: null, buf: [], bufLen: 0, top: [], level: 0, lastAlert: {} };
+  const A = { on: false, stream: null, ac: null, analyser: null, proc: null, classifier: null, buf: [], bufLen: 0, top: [], level: 0, lastAlert: {}, events: {}, peak: 0 };
 
   // ---------------------------------------------------------- Fil d'alertes
   function feed(text, kind = '') {
@@ -230,7 +241,8 @@ const start = () => {
     A.level = A.level ? A.level * 0.9 + level * 0.1 : level;
     $('#hudLevelBar').style.width = `${A.level}%`;
     const label = A.level < 30 ? 'calme' : A.level < 60 ? 'modéré' : 'bruyant';
-    E.state.ambient = { level: Math.round(A.level), label, top: A.top };
+    A.peak = Math.max(A.peak, A.level);
+    E.state.ambient = { level: Math.round(A.level), peak: Math.round(A.peak), label, top: A.top, events: Object.values(A.events) };
   }
 
   async function loadClassifier() {
@@ -250,7 +262,7 @@ const start = () => {
       const src = A.ac.createMediaStreamSource(A.stream);
       A.analyser = A.ac.createAnalyser(); A.analyser.fftSize = 1024; A.analyser.smoothingTimeConstant = 0.7;
       src.connect(A.analyser);
-      A.on = true; btn.textContent = '🎙 Couper le micro'; btn.disabled = false;
+      A.on = true; A.events = {}; A.peak = 0; btn.textContent = '🎙 Couper le micro'; btn.disabled = false;
       $('#hudSounds').textContent = 'Chargement du modèle sonore YAMNet…';
       feed('MICRO ACTIF · ANALYSE ANONYME DES SONS (AUCUN ENREGISTREMENT)');
       try {
@@ -271,8 +283,14 @@ const start = () => {
           cats.forEach((c) => { const n = SOUND_FR[c.categoryName] || c.categoryName; merged.set(n, Math.max(merged.get(n) || 0, c.score)); });
           A.top = [...merged.entries()].map(([name, score]) => ({ name, score })).sort((a, b) => b.score - a.score).slice(0, 3);
           $('#hudSounds').innerHTML = A.top.length ? A.top.map((t) => `<span>${t.name} <b>${Math.round(t.score * 100)} %</b></span>`).join('') : 'Aucun son caractéristique';
+          // journal des bruits perturbants de la session (catégorie, nombre d'occurrences, score max)
+          cats.filter((c) => ALERT_SOUNDS.has(c.categoryName) && c.score > 0.3).forEach((c) => {
+            const rule = NOISE_RULES.find((r) => r.re.test(c.categoryName)); if (!rule) return;
+            const ev = A.events[rule.cat] || (A.events[rule.cat] = { cat: rule.cat, sev: rule.sev, action: rule.action, count: 0, max: 0, first: new Date().toISOString() });
+            ev.count++; ev.max = Math.max(ev.max, c.score); ev.last = new Date().toISOString();
+          });
           cats.filter((c) => ALERT_SOUNDS.has(c.categoryName) && c.score > 0.3).forEach((c) => once(`snd-${c.categoryName}`, 10000, () => feed(`SON DÉTECTÉ · ${(SOUND_FR[c.categoryName] || c.categoryName).toUpperCase()}`, 'warn')));
-          if (A.level > 70) once('loud', 15000, () => feed('AMBIANCE BRUYANTE · NIVEAU SONORE ÉLEVÉ', 'warn'));
+          if (A.level > 65) once('loud', 15000, () => feed('AMBIANCE BRUYANTE · NIVEAU SONORE ÉLEVÉ', 'warn'));
         };
       } catch (e) {
         console.warn('[audio]', e);
@@ -449,7 +467,7 @@ const start = () => {
   }
   async function auditCollection() {
     if (!C.items.length) return;
-    const snapshot = E.state.ambient ? { ...E.state.ambient, top: [...E.state.ambient.top] } : null;
+    const snapshot = E.state.ambient ? { ...E.state.ambient, top: [...E.state.ambient.top], events: [...(E.state.ambient.events || [])] } : null;
     if (S.on) exit(true);
     E.state.ambient = snapshot;
     E.show('audit');
@@ -510,7 +528,7 @@ const start = () => {
   $('#hudCapture').addEventListener('click', async () => {
     if (C.pending.length) { $('#collectionCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     if (C.items.length) return auditCollection();
-    const snapshot = E.state.ambient ? { ...E.state.ambient, top: [...E.state.ambient.top] } : null;
+    const snapshot = E.state.ambient ? { ...E.state.ambient, top: [...E.state.ambient.top], events: [...(E.state.ambient.events || [])] } : null;
     exit(true);
     E.state.ambient = snapshot;
     await E.analyzeFromVideo();

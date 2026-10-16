@@ -70,6 +70,13 @@
         if (r.status.code === 'over') out.push({ type: 'Écart', category: r.label, severity: 'Mineure', title: `${r.label} : ${r.detected} détecté(s) pour ${r.expected} attendu(s) (+${r.gap})`, action: 'Vérifier les doublons de détection ou mettre à jour la configuration théorique.' });
         if (r.status.code === 'unsupported') out.push({ type: 'Hors modèle', category: r.label, severity: 'Mineure', title: `${r.label} : non vérifiable automatiquement (attendu : ${r.expected})`, action: 'Comptage manuel.' });
       });
+      // anomalies audio (mode Scan avec micro) : bruits perturbants et niveau sonore
+      const amb = E.state.ambient;
+      if (amb) {
+        (amb.events || []).forEach((ev) => out.push({ type: 'Audio', category: ev.cat, severity: ev.sev, title: `Bruit perturbant : ${ev.cat} (${ev.count} détection(s), confiance max ${Math.round(ev.max * 100)} %)`, action: ev.action }));
+        const peak = amb.peak ?? amb.level;
+        if (peak >= 65) out.push({ type: 'Audio', category: 'Niveau sonore', severity: peak >= 80 ? 'Majeure' : 'Mineure', title: `Ambiance bruyante : pic ${peak}/100 (niveau relatif)`, action: 'Identifier la source (couloir, rue, ventilation) ; fermer portes et fenêtres ; mesurer avec un sonomètre si le problème persiste.' });
+      }
       ((E.state.quality && E.state.quality.list) || []).filter((q) => q.level !== 'info').forEach((q) => {
         out.push({ type: 'Prise de vue', category: 'Qualité', severity: q.level === 'high' ? 'Majeure' : 'Mineure', title: q.title, action: q.advice });
       });
