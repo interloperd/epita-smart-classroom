@@ -261,7 +261,3 @@ La salle 3D (`vitrine.html`) fournit un **jeu de test synthétique annoté** : l
 2. **Fiabiliser :** proposer un audit en plusieurs zones (une prise de vue par rangée), avec une configuration par zone.
 3. **Spécialiser :** l'analyse avancée OWL-ViT couvre déjà tableau et fenêtres en zéro-shot ; si K1 reste inférieur à 70 %, faire un fine-tuning (COCO-SSD ou YOLO) sur un jeu annoté interne.
 4. **Industrialiser :** référentiel des salles (configuration par salle), archivage des rapports, intégration à l'outil de gestion des salles.
-
----
-
-*Annexes : README du dépôt (lancement, déploiement, provenance des bibliothèques) · captures d'écran de l'application.*
