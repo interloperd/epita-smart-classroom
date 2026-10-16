@@ -15,6 +15,7 @@ const QUERIES = [
   { text: 'a whiteboard', cls: 'whiteboard' },
   { text: 'a blackboard', cls: 'whiteboard' },
   { text: 'a window', cls: 'window' },
+  { text: 'a door', cls: 'door' },
 ];
 
 const iou = (a, b) => {
@@ -87,7 +88,7 @@ const start = () => {
       preds = preds.filter((p) => p.cls !== 'desk' || !cocoTables.some((t) => iou(t.bbox, p.bbox) > 0.3));
       E.addAdvanced(preds);
       const n = (k) => preds.filter((p) => p.cls === k).length;
-      msg.textContent = `✓ Analyse avancée (${ms} ms) : +${n('desk')} table(s)/bureau(x), ${n('whiteboard')} tableau(x), ${n('window')} fenêtre(s). Tableau et fenêtres sont désormais vérifiables pour cet audit.`;
+      msg.textContent = `✓ Analyse avancée (${ms} ms) : +${n('desk')} table(s)/bureau(x), ${n('whiteboard')} tableau(x), ${n('window')} fenêtre(s), ${n('door')} porte(s). Tableau, fenêtres et portes sont désormais vérifiables pour cet audit.`;
     } catch (e) {
       console.error('[OWL-ViT]', e);
       msg.textContent = `Analyse avancée indisponible (${e.message || e}). L'audit COCO-SSD reste valable.`;

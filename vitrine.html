@@ -74,6 +74,12 @@
             <canvas id="overlay3d" aria-hidden="true"></canvas>
             <div class="vp-badge" id="vpBadge">Faites glisser pour tourner · molette pour zoomer</div>
             <div class="vp-loading" id="vpLoading">Construction de la salle…</div>
+            <button class="vp-full" id="vpFull" type="button" aria-label="Plein écran">⛶</button>
+            <div class="vp-fs-tools">
+              <button class="vp-fs-btn vp-fs-primary" id="vpFsDetect" type="button">Analyser cette vue avec l'IA</button>
+              <span class="vp-fs-rate" id="vpFsRate" hidden></span>
+              <button class="vp-fs-btn" id="vpFsExit" type="button">✕ Quitter</button>
+            </div>
           </div>
           <div class="vp-bar">
             <div class="seg" role="group" aria-label="Point de vue">
@@ -81,12 +87,14 @@
               <button class="seg-btn" data-cam="back">Fond de salle</button>
               <button class="seg-btn" data-cam="close">Rapproché</button>
               <button class="seg-btn" data-cam="top">Plongée</button>
+              <button class="seg-btn" data-cam="door">Vers la porte</button>
             </div>
             <div class="seg" role="group" aria-label="Lumière">
               <button class="seg-btn is-on" data-light="day">Jour</button>
               <button class="seg-btn" data-light="evening">Soir</button>
               <button class="seg-btn" data-light="backlight">Contre-jour</button>
             </div>
+            <button class="seg-btn seg-full" id="vpFull2" type="button">⛶ Plein écran</button>
           </div>
         </div>
 
@@ -108,6 +116,7 @@
             <label><input type="checkbox" id="tBoard" checked> Tableau</label>
             <label><input type="checkbox" id="tWindows" checked> Fenêtres</label>
             <label><input type="checkbox" id="tScreen" checked> Écran mural</label>
+            <label><input type="checkbox" id="tDoor" checked> Porte</label>
             <label><input type="checkbox" id="tMess"> Chaises en désordre</label>
           </div>
 

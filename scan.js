@@ -31,6 +31,19 @@ const start = () => {
   const stage = $('#stage'), video = $('#video'), hud = $('#hud'), ui = $('#hudUi');
   const ctx = hud.getContext('2d');
   const S = { on: false, tracks: [], counters: {}, busy: false, fps: 0, lastDet: 0, lastQ: 0, raf: 0, timer: 0, sweep: 0 };
+  // Calques d'affichage du HUD (mémorisés par navigateur)
+  const PRESETS = {
+    min: { cards: false, adds: true, inv: false, feed: false, audio: false, info: false, fx: false },
+    std: { cards: true, adds: true, inv: true, feed: false, audio: false, info: true, fx: true },
+    all: { cards: true, adds: true, inv: true, feed: true, audio: true, info: true, fx: true },
+  };
+  let LAY = (() => { try { return { ...PRESETS.std, ...JSON.parse(localStorage.getItem('esc.hudLayers') || '{}') }; } catch { return { ...PRESETS.std }; } })();
+  function applyLayers() {
+    Object.keys(PRESETS.all).forEach((k) => ui.classList.toggle(`no-${k}`, !LAY[k]));
+    stage.classList.toggle('no-fx', !LAY.fx);
+    ui.querySelectorAll('[data-layer]').forEach((c) => { c.checked = !!LAY[c.dataset.layer]; });
+    try { localStorage.setItem('esc.hudLayers', JSON.stringify(LAY)); } catch { /* */ }
+  }
   const C = { items: [], pending: [], seq: 0 };
   // Sauvegarde automatique de l'inventaire dans le navigateur (survit au rechargement de la page)
   const INV_KEY = 'esc.inventory.v1';
@@ -122,6 +135,7 @@ const start = () => {
     if (video.videoWidth && (hud.width !== video.videoWidth || hud.height !== video.videoHeight)) { hud.width = video.videoWidth; hud.height = video.videoHeight; }
     const W = hud.width, H = hud.height, s = Math.max(1, W / 960), now = performance.now();
     ctx.clearRect(0, 0, W, H);
+    if (LAY.fx) {
     // balayage
     S.sweep = (S.sweep + 2.2 * s) % H;
     const g = ctx.createLinearGradient(0, S.sweep - 60 * s, 0, S.sweep);
@@ -130,6 +144,7 @@ const start = () => {
     // grille de visée centrale
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1 * s;
     ctx.beginPath(); ctx.arc(W / 2, H / 2, 18 * s, 0, Math.PI * 2); ctx.moveTo(W / 2 - 30 * s, H / 2); ctx.lineTo(W / 2 - 10 * s, H / 2); ctx.moveTo(W / 2 + 10 * s, H / 2); ctx.lineTo(W / 2 + 30 * s, H / 2); ctx.stroke();
+    }
 
     S.tracks.forEach((t) => {
       for (let i = 0; i < 4; i++) t.shown[i] += (t.bbox[i] - t.shown[i]) * 0.25;
@@ -150,7 +165,8 @@ const start = () => {
       const tw = ctx.measureText(tag).width + 14 * s, th = 20 * s, ty = Math.max(0, y - th - 4 * s);
       ctx.fillStyle = 'rgba(91,45,142,.92)'; ctx.fillRect(x, ty, tw, th);
       ctx.fillStyle = '#fff'; ctx.fillText(tag, x + 7 * s, ty + 14 * s);
-      // fiche de données
+      // fiche de données (calque « Fiches »)
+      if (!LAY.cards) { ctx.globalAlpha = 1; return; }
       const key = CONFIG_KEY[t.cls];
       const expected = key ? E.state.config[key[0]] : null;
       const got = C.items.filter((o) => o.cls === t.cls).length;
@@ -182,7 +198,7 @@ const start = () => {
       return `<div class="hud-row"><span>${label.toUpperCase()} <i>· vu ${v}</i></span><b>${n}${exp !== null && exp !== undefined ? `<i>/${exp}</i>` : ''}</b><div class="hud-bar"><span style="width:${pctv}%"></span></div></div>`;
     });
     const others = live.filter((t) => !CONFIG_KEY[t.cls]).length;
-    $('#hudCounts').innerHTML = `<div class="hud-title">INVENTAIRE · ${C.items.length} OBJET(S)${C.pending.length ? ` · ${C.pending.length} À VALIDER` : ''}</div>${rows.join('')}<div class="hud-row"><span>AUTRES</span><b>${C.items.filter((t) => !CONFIG_KEY[t.cls]).length}<i> · vu ${others}</i></b></div><div class="hud-row muted"><span>NON VÉRIFIABLES</span><b>TABLEAU · FENÊTRES</b></div>`;
+    $('#hudCounts').innerHTML = `<div class="hud-title">INVENTAIRE · ${C.items.length} OBJET(S)${C.pending.length ? ` · ${C.pending.length} À VALIDER` : ''}</div>${rows.join('')}<div class="hud-row"><span>AUTRES</span><b>${C.items.filter((t) => !CONFIG_KEY[t.cls]).length}<i> · vu ${others}</i></b></div><div class="hud-row muted"><span>NON VÉRIFIABLES</span><b>TABLEAU · FENÊTRES · PORTES</b></div>`;
   }
 
   // ---------------------------------------------------------- Audio : niveau, spectre, classification YAMNet
@@ -467,6 +483,12 @@ const start = () => {
     renderCollection();
   }
 
+  $('#hudLayersBtn').addEventListener('click', () => {
+    const p = $('#hudLayers'); p.hidden = !p.hidden; $('#hudLayersBtn').setAttribute('aria-expanded', String(!p.hidden));
+  });
+  $('#hudLayers').addEventListener('change', (e) => { const k = e.target.dataset.layer; if (k) { LAY[k] = e.target.checked; applyLayers(); if (k === 'audio' && !LAY.audio && A.on) micOff(); } });
+  $('#hudLayers').addEventListener('click', (e) => { const p = e.target.dataset.preset; if (p) { LAY = { ...PRESETS[p] }; applyLayers(); if (!LAY.audio && A.on) micOff(); } });
+  applyLayers();
   $('#btnScan').addEventListener('click', () => (S.on ? exit() : enter()));
   $('#hudExit').addEventListener('click', () => exit());
   $('#hudMic').addEventListener('click', () => (A.on ? micOff() : micOn()));

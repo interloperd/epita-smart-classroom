@@ -100,6 +100,16 @@ const winGroup = new THREE.Group();
 });
 scene.add(winGroup);
 
+// Porte (mur du fond, côté droit)
+const doorGroup = new THREE.Group();
+const doorMat = new THREE.MeshStandardMaterial({ color: '#8A6A4A', roughness: 0.6 });
+const leaf = box(0.95, 2.1, 0.05, doorMat, false); leaf.position.y = 1.05; doorGroup.add(leaf);
+[[-0.52, 1.08, 0.06, 2.2], [0.52, 1.08, 0.06, 2.2]].forEach(([x, y, w, h]) => { const f = box(w, h, 0.08, M.winFrame, false); f.position.set(x, y, 0); doorGroup.add(f); });
+const lintel = box(1.1, 0.06, 0.08, M.winFrame, false); lintel.position.y = 2.17; doorGroup.add(lintel);
+const handle = box(0.12, 0.03, 0.05, M.alu, false); handle.position.set(0.32, 1.0, -0.05); doorGroup.add(handle);
+doorGroup.position.set(3.6, 0, D / 2 - 0.04);
+scene.add(doorGroup);
+
 // Luminaires de plafond (décor)
 for (const x of [-2.2, 2.2]) for (const z of [-3, 0, 3]) {
   const l = box(1.2, 0.04, 0.3, new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff', emissiveIntensity: 0.6 }), false);
@@ -141,8 +151,8 @@ for (let r = 0; r < 6; r++) for (const x of [-2.3, 2.3]) TABLE_SLOTS.push([x, -3
 // Générateur pseudo-aléatoire reproductible (pour le « désordre »)
 function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
 
-const cfg = { tables: 10, chairs: 20, laptops: 5, board: true, windows: true, screen: true, mess: false };
-const truth = { tables: 0, chairs: 0, laptops: 0, screens: 0, board: 0, windows: 0 };
+const cfg = { tables: 10, chairs: 20, laptops: 5, board: true, windows: true, screen: true, door: true, mess: false };
+const truth = { tables: 0, chairs: 0, laptops: 0, screens: 0, board: 0, windows: 0, doors: 0 };
 
 function disposeGroup(g) { while (g.children.length) g.remove(g.children[0]); }
 
@@ -171,7 +181,8 @@ function buildFurniture() {
   boardGroup.visible = cfg.board;
   winGroup.visible = cfg.windows;
   tvGroup.visible = cfg.screen;
-  Object.assign(truth, { tables: nT, chairs: cfg.chairs, laptops: nL, screens: cfg.screen ? 1 : 0, board: cfg.board ? 1 : 0, windows: cfg.windows ? 3 : 0 });
+  doorGroup.visible = cfg.door;
+  Object.assign(truth, { tables: nT, chairs: cfg.chairs, laptops: nL, screens: cfg.screen ? 1 : 0, board: cfg.board ? 1 : 0, windows: cfg.windows ? 3 : 0, doors: cfg.door ? 1 : 0 });
   clearDetection();
 }
 
@@ -209,6 +220,7 @@ function setLight(k) {
 const CAMS = {
   overview: { pos: [4.3, 2.55, 5.6], target: [-0.6, 0.55, -1.6] },
   back: { pos: [0, 1.7, 5.75], target: [0, 0.7, -3] },
+  door: { pos: [-1.5, 1.6, -3.5], target: [3.4, 1.0, 6] },
   close: { pos: [-0.55, 1.35, -1.25], target: [-2.4, 0.78, -3.1] },
   top: { pos: [0.01, 3.05, 4.6], target: [0, 0, -0.8] },
   windows: { pos: [4.2, 1.55, 0.4], target: [-5, 1.1, 0] },
@@ -231,7 +243,7 @@ function resize() {
 }
 new ResizeObserver(resize).observe(vp);
 
-controls.addEventListener('start', () => clearDetection());
+controls.addEventListener('start', () => { clearDetection(); const f = document.getElementById('vpFsRate'); if (f) f.hidden = true; });
 function loop() {
   if (camAnim) {
     camAnim.t = Math.min(1, camAnim.t + 0.035);
@@ -255,6 +267,7 @@ const CAT = [
   { key: 'screens', label: 'Écrans', coco: ['tv'] },
   { key: 'board', label: 'Tableau', coco: [] },
   { key: 'windows', label: 'Fenêtres', coco: [] },
+  { key: 'doors', label: 'Portes', coco: [] },
 ];
 const FR = { 'chair': 'Chaise', 'dining table': 'Table', 'laptop': 'Portable', 'tv': 'Écran', 'keyboard': 'Clavier', 'couch': 'Canapé', 'bench': 'Banc', 'book': 'Livre' };
 let lastDetected = null;
@@ -347,7 +360,7 @@ bindRange('#nTables', '#oTables', 'tables', () => {
 });
 bindRange('#nChairs', '#oChairs', 'chairs');
 bindRange('#nLaptops', '#oLaptops', 'laptops');
-[['#tBoard', 'board'], ['#tWindows', 'windows'], ['#tScreen', 'screen'], ['#tMess', 'mess']].forEach(([id, k]) => {
+[['#tBoard', 'board'], ['#tWindows', 'windows'], ['#tScreen', 'screen'], ['#tDoor', 'door'], ['#tMess', 'mess']].forEach(([id, k]) => {
   $(id).addEventListener('change', (e) => { cfg[k] = e.target.checked; buildFurniture(); });
 });
 document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => {
@@ -363,6 +376,30 @@ document.querySelectorAll('[data-light]').forEach((b) => b.addEventListener('cli
   }
 }));
 $('#btnDetect').addEventListener('click', detect);
+
+// ---------------------------------------------------------------- Plein écran (natif, ou secours CSS pour iPhone)
+const wrap = vp.closest('.viewport-wrap');
+const isFull = () => !!document.fullscreenElement || wrap.classList.contains('is-full');
+function pseudoFull(on) { wrap.classList.toggle('is-full', on); document.body.classList.toggle('no-scroll', on); requestAnimationFrame(resize); }
+async function enterFull() {
+  try {
+    if (wrap.requestFullscreen) await wrap.requestFullscreen();
+    else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+    else pseudoFull(true);
+  } catch { pseudoFull(true); }
+  try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch { /* non supporté */ }
+}
+function exitFull() { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); pseudoFull(false); }
+$('#vpFull').addEventListener('click', enterFull);
+$('#vpFull2').addEventListener('click', () => (isFull() ? exitFull() : enterFull()));
+$('#vpFsExit').addEventListener('click', exitFull);
+$('#vpFsDetect').addEventListener('click', async () => {
+  await detect();
+  const r = $('#rateVal').textContent, f = $('#vpFsRate');
+  f.hidden = $('#rateBox').hidden; f.textContent = `Taux de détection : ${r}`;
+});
+document.addEventListener('fullscreenchange', () => { requestAnimationFrame(resize); if (!document.fullscreenElement) $('#vpFsRate').hidden = true; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && wrap.classList.contains('is-full')) pseudoFull(false); });
 $('#btnPng').addEventListener('click', () => {
   renderer.render(scene, camera);
   const a = document.createElement('a');

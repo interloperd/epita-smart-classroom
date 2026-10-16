@@ -141,8 +141,23 @@
             <canvas id="hud" aria-hidden="true"></canvas>
             <div class="hud" id="hudUi" hidden>
               <div class="hud-tl"><span class="hud-live">● SCAN EN DIRECT</span><span>ANALYSE LOCALE · AUCUN ENREGISTREMENT</span><span id="hudFps">— IPS</span></div>
-              <div class="hud-tr"><button class="hud-btn hud-btn-accent" id="hudAddAll" type="button">＋ Ajouter tous les visibles</button><button class="hud-btn" id="hudFull" type="button">⛶ Plein écran</button><button class="hud-btn" id="hudExit" type="button">✕ Quitter</button></div>
+              <div class="hud-tr"><button class="hud-btn" id="hudLayersBtn" type="button" aria-expanded="false" aria-controls="hudLayers">☰ Affichage</button><button class="hud-btn hud-btn-accent" id="hudAddAll" type="button">＋ Ajouter tous les visibles</button><button class="hud-btn" id="hudFull" type="button">⛶ Plein écran</button><button class="hud-btn" id="hudExit" type="button">✕ Quitter</button></div>
               <div class="hud-adds" id="hudAdds"></div>
+              <div class="hud-layers" id="hudLayers" hidden>
+                <div class="hud-title">ÉLÉMENTS VISIBLES</div>
+                <div class="hud-presets">
+                  <button class="hud-btn hud-btn-sm" type="button" data-preset="min">Épuré</button>
+                  <button class="hud-btn hud-btn-sm" type="button" data-preset="std">Standard</button>
+                  <button class="hud-btn hud-btn-sm" type="button" data-preset="all">Complet</button>
+                </div>
+                <label><input type="checkbox" data-layer="cards"> Fiches de données sur les objets</label>
+                <label><input type="checkbox" data-layer="adds"> Boutons « ＋ Ajouter »</label>
+                <label><input type="checkbox" data-layer="inv"> Inventaire (compteurs)</label>
+                <label><input type="checkbox" data-layer="feed"> Historique des détections et alertes</label>
+                <label><input type="checkbox" data-layer="audio"> Micro et ambiance sonore</label>
+                <label><input type="checkbox" data-layer="info"> Infos système (IPS, statut)</label>
+                <label><input type="checkbox" data-layer="fx"> Effets (balayage, viseur, lignes)</label>
+              </div>
               <div class="hud-left" id="hudCounts"></div>
               <div class="hud-right" id="hudFeed" aria-live="polite"></div>
               <div class="hud-bottom">
@@ -188,7 +203,7 @@
             <label class="check inline-check"><input type="checkbox" id="tGrid" checked> Grille de cadrage</label>
           </div>
           <div class="adv-row">
-            <button id="btnAdvanced" class="btn btn-ghost" type="button" disabled>🔬 Analyse avancée : tables, tableau, fenêtres (OWL-ViT)</button>
+            <button id="btnAdvanced" class="btn btn-ghost" type="button" disabled>🔬 Analyse avancée : tables, tableau, fenêtres, portes (OWL-ViT)</button>
             <span class="muted small" id="advMsg">Modèle « open-vocabulary » complémentaire (Google OWL-ViT via Transformers.js), à lancer sur une image capturée. Premier lancement : téléchargement du modèle, puis mis en cache.</span>
           </div>
 

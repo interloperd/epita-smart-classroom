@@ -31,6 +31,8 @@
     { key: 'laptops', label: 'Ordinateurs portables', coco: ['laptop'],       support: 'yes',     example: 5 },
     { key: 'screens', label: 'Écrans',                coco: ['tv'],           support: 'partial', example: null,
       note: 'Classe « tv » : moniteurs et écrans assimilés.' },
+    { key: 'doors',   label: 'Portes',                coco: [], adv: ['door'], support: 'no', example: null,
+      note: 'Aucune classe « door » dans COCO.' },
     { key: 'windows', label: 'Fenêtres',              coco: [], adv: ['window'], support: 'no',      example: null,
       note: 'Aucune classe « window » dans COCO.' },
   ];
@@ -38,7 +40,7 @@
   /** Libellés français des autres équipements reconnaissables en salle. */
   const FR = {
     'chair': 'Chaise', 'dining table': 'Table / bureau', 'laptop': 'Ordinateur portable', 'tv': 'Écran',
-    'keyboard': 'Clavier', 'mouse': 'Souris', 'book': 'Livre', 'clock': 'Horloge', 'desk': 'Table / bureau (OWL-ViT)', 'whiteboard': 'Tableau (OWL-ViT)', 'window': 'Fenêtre (OWL-ViT)', 'potted plant': 'Plante',
+    'keyboard': 'Clavier', 'mouse': 'Souris', 'book': 'Livre', 'clock': 'Horloge', 'desk': 'Table / bureau (OWL-ViT)', 'whiteboard': 'Tableau (OWL-ViT)', 'window': 'Fenêtre (OWL-ViT)', 'door': 'Porte (OWL-ViT)', 'potted plant': 'Plante',
     'couch': 'Canapé', 'bench': 'Banc', 'backpack': 'Sac à dos', 'handbag': 'Sac', 'cell phone': 'Téléphone',
     'bottle': 'Bouteille', 'cup': 'Tasse', 'remote': 'Télécommande', 'vase': 'Vase', 'scissors': 'Ciseaux',
     'refrigerator': 'Réfrigérateur', 'microwave': 'Micro-ondes', 'sink': 'Évier', 'umbrella': 'Parapluie',
@@ -68,7 +70,7 @@
     analyzed: false, source: null, analyzedAt: null, inferenceMs: null,
     imgW: 0, imgH: 0, measure: null, quality: null,
     threshold: 0.5, tolerance: 0,
-    classThr: { 'dining table': 0.3, desk: 0.1, whiteboard: 0.1, window: 0.1 }, advancedDone: false, // seuils spécifiques par classe (les tables sortent souvent à 30-45 %)
+    classThr: { 'dining table': 0.3, desk: 0.1, whiteboard: 0.1, window: 0.1, door: 0.1 }, advancedDone: false, // seuils spécifiques par classe (les tables sortent souvent à 30-45 %)
     auditStart: null, lastDurationS: null,
     config: {}, roomName: 'Salle de démonstration',
     history: [],
@@ -700,7 +702,7 @@
 
   const LIMITS = [
     'Modèle pré-entraîné sur COCO (images du quotidien), non spécialisé pour les salles de cours : bureaux reconnus comme « dining table », écrans comme « tv ».',
-    'Tableau et fenêtres absents des 80 classes COCO : non vérifiables automatiquement.',
+    'Tableau, fenêtres et portes absents des 80 classes COCO : vérifiables seulement via l\'analyse avancée OWL-ViT (zéro-shot, fiabilité moindre).',
     'Une seule image analysée : les objets masqués, empilés, coupés par le cadre ou trop petits ne sont pas comptés.',
     'Le score de confiance n\'est pas une probabilité calibrée ; le résultat dépend du seuil choisi.',
     'Sensibilité à l\'éclairage, aux reflets, au flou et à l\'angle de prise de vue.',
@@ -907,7 +909,7 @@
     analyzeFromVideo: async () => capture(), analyzeCollection,
     /** Ajoute les détections de l'analyse avancée (OWL-ViT) à l'analyse courante. */
     addAdvanced(preds) {
-      state.raw = state.raw.filter((p) => !['desk', 'whiteboard', 'window'].includes(p.cls)).concat(preds);
+      state.raw = state.raw.filter((p) => !['desk', 'whiteboard', 'window', 'door'].includes(p.cls)).concat(preds);
       state.advancedDone = true;
       redrawFrame(); renderResults(); renderDashboard();
       document.dispatchEvent(new CustomEvent('esc:analyzed'));

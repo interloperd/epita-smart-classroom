@@ -95,6 +95,27 @@ main > section.band > * { max-width: 1160px; margin-left: auto; margin-right: au
 .rate b { font-size: 2rem; font-weight: 200; }
 .rate small { font-size: .72rem; opacity: .85; }
 
+/* plein écran de la salle 3D */
+.vp-full { position: absolute; right: 12px; top: 12px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.6); background: rgba(42,19,66,.65); color: #fff; font-size: 1.1rem; cursor: pointer; }
+.seg-full { border: 1px solid var(--line); background: #fff; }
+.vp-fs-tools { display: none; position: absolute; z-index: 5; right: 14px; top: 12px; gap: 8px; align-items: center; }
+.vp-fs-btn { font: 600 .82rem var(--font); color: #fff; background: rgba(42,19,66,.72); border: 1px solid rgba(255,255,255,.55); border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+.vp-fs-primary { background: #fff; color: var(--violet-900); border-color: #fff; }
+.vp-fs-rate { font: 600 .8rem var(--font); color: #fff; background: var(--violet); padding: 9px 14px; border-radius: 999px; }
+.viewport-wrap.is-full { position: fixed; inset: 0; z-index: 100; background: var(--violet-900); display: flex; flex-direction: column; }
+body.no-scroll { overflow: hidden; }
+.viewport-wrap:fullscreen { background: var(--violet-900); display: flex; flex-direction: column; }
+.viewport-wrap:fullscreen .viewport, .viewport-wrap.is-full .viewport { flex: 1; aspect-ratio: auto; border-radius: 0; }
+.viewport-wrap:fullscreen .vp-bar, .viewport-wrap.is-full .vp-bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); margin: 0; z-index: 6; width: max-content; max-width: calc(100% - 24px); justify-content: center; }
+.viewport-wrap:fullscreen .vp-fs-tools, .viewport-wrap.is-full .vp-fs-tools { display: flex; }
+.viewport-wrap:fullscreen .vp-full, .viewport-wrap.is-full .vp-full, .viewport-wrap:fullscreen .seg-full, .viewport-wrap.is-full .seg-full { display: none; }
+.viewport-wrap:fullscreen .vp-badge, .viewport-wrap.is-full .vp-badge { bottom: auto; top: 14px; }
+@media (max-width: 640px) {
+  .viewport-wrap:fullscreen .vp-bar, .viewport-wrap.is-full .vp-bar { flex-direction: column; align-items: center; bottom: 10px; }
+  .vp-fs-tools { left: 10px; right: 10px; top: 52px; flex-wrap: wrap; justify-content: flex-end; }
+  .vp-fs-btn { padding: 8px 12px; font-size: .74rem; }
+}
+
 /* cards */
 .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }

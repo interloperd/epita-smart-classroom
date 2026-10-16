@@ -352,6 +352,15 @@ main, .view, .card, .report, .audit-layout > *, .results-col > *, .grid-2 > * { 
 }
 
 
+/* ---------- Calques du HUD (affichage à la carte) ---------- */
+.hud-layers { top: 50px; right: 12px; width: 260px; z-index: 8; background: rgba(20,10,34,.92); border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: .68rem; }
+.hud-layers label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.hud-layers input { accent-color: #B794E0; width: 15px; height: 15px; }
+.hud-presets { display: flex; gap: 6px; margin-bottom: 4px; }
+.hud.no-inv .hud-left, .hud.no-feed .hud-right, .hud.no-audio .hud-audio, .hud.no-info .hud-tl, .hud.no-adds .hud-adds { display: none !important; }
+.stage.scan.no-fx::after { background: none; }
+.hud:not(.no-feed) ~ .hud-layers { }
+
 /* ---------- Collection d'objets (scan cumulé) ---------- */
 .hud-adds { inset: 0; pointer-events: none !important; }
 .hud-add { position: absolute; pointer-events: auto; transform: translate(-2px, 4px); font: 700 .66rem var(--font); letter-spacing: .03em; color: var(--violet-900); background: #fff; border: 0; border-radius: 999px; padding: 5px 10px; cursor: pointer; box-shadow: 0 0 0 3px rgba(183,148,224,.55), 0 4px 14px rgba(0,0,0,.35); white-space: nowrap; animation: fade .2s ease; }
